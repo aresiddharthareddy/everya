@@ -1,11 +1,7 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "better-auth/crypto";
 
 const prisma = new PrismaClient();
-
-async function hashPassword(password: string) {
-  return bcrypt.hash(password, 12);
-}
 
 const USERS = [
   { username: "alex", email: "alex@everya.dev", name: "Alex Chen", bio: "Platform engineer. Building reliable systems.", password: "demo12345" },
