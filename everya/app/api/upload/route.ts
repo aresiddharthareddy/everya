@@ -13,6 +13,9 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
+  if (file.size > 8 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 8MB)" }, { status: 400 });
+  }
 
   const uploadDir = path.join(process.cwd(), "storage", "uploads");
   await mkdir(uploadDir, { recursive: true });

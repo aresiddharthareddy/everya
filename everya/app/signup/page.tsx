@@ -50,11 +50,11 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link href="/" className="text-sm font-semibold tracking-tight mb-4 inline-block">
+          <Link href="/" className="text-xs font-semibold tracking-[0.16em] mb-4 inline-block">
             EVERYA
           </Link>
           <CardTitle>Create account</CardTitle>
-          <CardDescription>Join EVERYA with a unique @username</CardDescription>
+          <CardDescription>A unique @username. Then you can publish.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -84,7 +84,7 @@ export default function SignupPage() {
               <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full rounded-full" disabled={loading}>
               {loading ? "Creating..." : "Create account"}
             </Button>
           </form>

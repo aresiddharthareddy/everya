@@ -16,6 +16,11 @@ export default async function NotificationsPage() {
     take: 50,
   });
 
+  await prisma.notification.updateMany({
+    where: { userId: session.user.id, read: false },
+    data: { read: true },
+  });
+
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold tracking-tight mb-6">Notifications</h1>

@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Lock, Zap, FolderTree, BarChart3 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { LandingHero } from "@/components/landing/hero";
 import { prisma } from "@/lib/prisma";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatUsername, formatCount } from "@/lib/utils";
 
 export default async function LandingPage() {
@@ -11,30 +9,38 @@ export default async function LandingPage() {
     prisma.repository.findMany({
       where: { visibility: "PUBLIC" },
       take: 3,
-      include: { owner: { select: { username: true } }, _count: { select: { documents: true } } },
+      include: { owner: { select: { username: true, name: true } }, _count: { select: { documents: true } } },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.document.findMany({
       where: { repository: { visibility: "PUBLIC" } },
-      take: 4,
-      include: { repository: { select: { name: true, slug: true, owner: { select: { username: true } } } }, author: { select: { username: true } } },
+      take: 6,
+      include: {
+        repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
+        author: { select: { username: true, name: true } },
+      },
       orderBy: { readerCount: "desc" },
     }),
   ]);
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <span className="font-semibold tracking-tight">EVERYA</span>
-          <nav className="flex items-center gap-4">
-            <Link href="/explore" className="text-sm text-muted-foreground hover:text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-6">
+          <Link href="/" className="font-semibold tracking-[0.18em] text-sm">
+            EVERYA
+          </Link>
+          <nav className="flex items-center gap-2 sm:gap-4">
+            <Link href="/explore" className="text-sm text-muted-foreground hover:text-foreground px-2">
               Explore
             </Link>
-            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground px-2 hidden sm:inline">
               Sign in
             </Link>
-            <Link href="/signup" className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background hover:opacity-90">
+            <Link
+              href="/signup"
+              className="inline-flex h-9 items-center justify-center rounded-full bg-foreground px-4 text-sm font-medium text-background hover:opacity-90"
+            >
               Get started
             </Link>
           </nav>
@@ -44,75 +50,77 @@ export default async function LandingPage() {
       <main>
         <LandingHero />
 
-        <section className="border-y border-border bg-muted/30 py-16">
-          <div className="mx-auto max-w-6xl px-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <section className="border-y border-border bg-muted/40">
+          <div className="mx-auto max-w-6xl px-6 py-14 grid sm:grid-cols-3 gap-10">
             {[
-              { icon: Zap, title: "Extremely fast", desc: "Optimized rendering and instant navigation" },
-              { icon: FolderTree, title: "Nested structure", desc: "Repositories, folders, and deep hierarchies" },
-              { icon: BarChart3, title: "Measurable", desc: "Readers, ratings, and reading time analytics" },
-              { icon: Lock, title: "Enterprise-ready", desc: "Public, private, and enterprise repositories" },
+              { title: "Write like a magazine", desc: "Serif reading, live markdown, and an editor that stays out of the way." },
+              { title: "Keep it structured", desc: "Repositories and nested folders so a company wiki never becomes a pile of posts." },
+              { title: "See what lands", desc: "Readers, ratings, likes, and discussion on every published piece." },
             ].map((f) => (
-              <div key={f.title} className="space-y-2">
-                <f.icon className="h-5 w-5 text-muted-foreground" />
-                <h3 className="font-medium">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              <div key={f.title}>
+                <h3 className="font-medium tracking-tight">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mt-2">{f.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="text-2xl font-semibold mb-8">Featured repositories</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {repos.map((repo) => (
-              <Card key={repo.id}>
-                <CardHeader>
-                  <CardTitle className="text-base">{repo.name}</CardTitle>
-                  <CardDescription>{formatUsername(repo.owner.username)}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{repo.description}</p>
-                  <Link
-                    href={`/r/${repo.owner.username}/${repo.slug}`}
-                    className="text-sm font-medium inline-flex items-center gap-1 hover:underline"
-                  >
-                    {repo._count.documents} docs <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+        <section className="mx-auto max-w-6xl px-6 py-16">
+          <div className="flex items-end justify-between mb-8">
+            <h2 className="font-serif text-3xl tracking-tight">Popular stories</h2>
+            <Link href="/explore" className="text-sm font-medium inline-flex items-center gap-1 hover:underline">
+              All stories <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
+          {docs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No public stories yet. Be the first to publish.</p>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-8">
+              {docs.map((doc) => (
+                <Link key={doc.id} href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`} className="group">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {doc.repository.name} · {formatUsername(doc.author.username)}
+                  </p>
+                  <h3 className="mt-2 font-serif text-2xl tracking-tight group-hover:underline decoration-1 underline-offset-4">
+                    {doc.title}
+                  </h3>
+                  {doc.excerpt && (
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3">{doc.excerpt}</p>
+                  )}
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {doc.readingMinutes} min read · {formatCount(doc.readerCount)} readers
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 pb-24">
-          <h2 className="text-2xl font-semibold mb-8">Popular documentation</h2>
-          <div className="divide-y divide-border rounded-lg border border-border">
-            {docs.map((doc) => (
-              <Link
-                key={doc.id}
-                href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`}
-                className="flex items-center justify-between px-5 py-4 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{doc.title}</p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {doc.repository.name} · {formatUsername(doc.author.username)}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-sm text-muted-foreground shrink-0 ml-4">
-                  {formatCount(doc.readerCount)} readers
-                </span>
-              </Link>
-            ))}
-          </div>
+        <section className="mx-auto max-w-6xl px-6 pb-20">
+          <h2 className="font-serif text-3xl tracking-tight mb-8">Collections</h2>
+          {repos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Public collections will appear here.</p>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-4">
+              {repos.map((repo) => (
+                <Link
+                  key={repo.id}
+                  href={`/r/${repo.owner.username}/${repo.slug}`}
+                  className="rounded-2xl border border-border bg-card p-6 hover:bg-muted/40 transition-colors"
+                >
+                  <h3 className="font-medium">{repo.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{formatUsername(repo.owner.username)}</p>
+                  <p className="text-sm text-muted-foreground mt-3 line-clamp-2 min-h-[2.5rem]">{repo.description}</p>
+                  <p className="text-xs mt-4 font-medium">{repo._count.documents} stories</p>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </main>
 
-      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} EVERYA. Built for technical teams.
+      <footer className="border-t border-border py-10 text-center text-sm text-muted-foreground">
+        © {new Date().getFullYear()} EVERYA. A home for serious writing.
       </footer>
     </div>
   );

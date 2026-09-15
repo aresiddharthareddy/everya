@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
@@ -13,15 +13,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const sourceSerif = Source_Serif_4({
+  variable: "--font-source-serif",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "EVERYA — Structured knowledge for technical teams",
-  description: "Enterprise-grade technical documentation and publishing platform",
+  title: {
+    default: "EVERYA — Stories and structured knowledge",
+    template: "%s · EVERYA",
+  },
+  description:
+    "A publishing home for long-form writing and technical knowledge. Read, write, organize, and measure stories with the density of a great magazine.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable} antialiased`}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

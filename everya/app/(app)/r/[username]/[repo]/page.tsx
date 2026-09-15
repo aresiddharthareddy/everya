@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileText, Plus } from "lucide-react";
 import { getRepositoryByPath, getRepositoryTree } from "@/services/repositories";
+import { canViewRepo } from "@/lib/access";
 import { Breadcrumbs } from "@/components/repos/breadcrumbs";
 import { RepoTree } from "@/components/repos/repo-tree";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ export default async function RepositoryPage({
   if (!repo) notFound();
 
   const session = await getServerSession();
+  if (!canViewRepo(repo, session?.user.id)) notFound();
   const isOwner = session?.user.id === repo.owner.id;
   const tree = await getRepositoryTree(repo.id);
   const basePath = `/r/${repo.owner.username}/${repo.slug}`;

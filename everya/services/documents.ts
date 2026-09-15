@@ -32,6 +32,14 @@ export async function recordDocumentView(
   userId?: string,
   durationSeconds = 60
 ) {
+  const since = new Date(Date.now() - 60 * 60 * 1000);
+  const recent = userId
+    ? await prisma.documentView.findFirst({
+        where: { documentId, userId, createdAt: { gte: since } },
+      })
+    : null;
+  if (recent) return;
+
   await prisma.$transaction([
     prisma.documentView.create({
       data: { documentId, userId, durationSeconds },

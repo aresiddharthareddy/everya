@@ -63,12 +63,14 @@ export function CommentSection({
 
   const likeComment = async (commentId: string) => {
     if (!currentUserId) return;
-    await fetch("/api/comments/like", {
+    const res = await fetch("/api/comments/like", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ commentId }),
     });
-    setComments((prev) => updateLikeCount(prev, commentId));
+    if (!res.ok) return;
+    const data = await res.json();
+    setComments((prev) => updateLikeCount(prev, commentId, data.liked ? 1 : -1));
   };
 
   return (
@@ -100,11 +102,16 @@ export function CommentSection({
           </Button>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground mb-8">Sign in to join the discussion.</p>
+        <p className="text-sm text-muted-foreground mb-8">
+          <a href="/login" className="underline underline-offset-2">Sign in</a> to join the discussion.
+        </p>
       )}
 
       <div className="space-y-6">
-        {comments.map((comment) => (
+        {comments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No comments yet. Start the conversation.</p>
+        ) : (
+          comments.map((comment) => (
           <CommentItem
             key={comment.id}
             comment={comment}
@@ -113,16 +120,17 @@ export function CommentSection({
             onLike={() => likeComment(comment.id)}
             onReplyLike={(id) => likeComment(id)}
           />
-        ))}
+        ))
+        )}
       </div>
     </section>
   );
 }
 
-function updateLikeCount(comments: CommentData[], id: string): CommentData[] {
+function updateLikeCount(comments: CommentData[], id: string, delta: number): CommentData[] {
   return comments.map((c) => {
-    if (c.id === id) return { ...c, likeCount: c.likeCount + 1 };
-    if (c.replies) return { ...c, replies: updateLikeCount(c.replies, id) };
+    if (c.id === id) return { ...c, likeCount: Math.max(0, c.likeCount + delta) };
+    if (c.replies) return { ...c, replies: updateLikeCount(c.replies, id, delta) };
     return c;
   });
 }

@@ -20,3 +20,9 @@ everya/.DS_Store
 everya/*.tsbuildinfo
 everya/next-env.d.ts
 everya/npm-debug.log*
+everya/apk/android/.gradle/
+everya/apk/android/app/build/
+everya/apk/android/app/src/main/assets/
+everya/apk/android/local.properties
+
+agent-tools/

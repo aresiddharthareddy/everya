@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +10,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
+  const router = useRouter();
   const user = session?.user as { name?: string; bio?: string; username?: string; email?: string } | undefined;
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!isPending && !session) router.push("/login?next=/settings");
+  }, [isPending, session, router]);
 
   useEffect(() => {
     if (user) {
@@ -77,7 +83,10 @@ export default function SettingsPage() {
           <CardTitle>Account</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" onClick={() => signOut()}>
+          <Button variant="outline" className="rounded-full" onClick={async () => {
+            await signOut();
+            window.location.href = "/";
+          }}>
             Sign out
           </Button>
         </CardContent>

@@ -2,27 +2,31 @@
 @import "highlight.js/styles/github.min.css";
 
 :root {
-  --background: #fafafa;
-  --foreground: #0a0a0a;
+  --background: #faf9f6;
+  --foreground: #1a1917;
   --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
-  --ring: #a1a1aa;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
+  --card-foreground: #1a1917;
+  --muted: #f3f1eb;
+  --muted-foreground: #6b6560;
+  --border: #e8e4dc;
+  --ring: #b8b0a4;
+  --destructive: #c2410c;
+  --destructive-foreground: #faf9f6;
+  --accent: #1a1917;
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #0c0c0e;
-  --card-foreground: #fafafa;
-  --muted: #18181b;
-  --muted-foreground: #a1a1aa;
-  --border: #27272a;
-  --ring: #52525b;
+  --background: #0c0b0a;
+  --foreground: #f4f1ea;
+  --card: #141312;
+  --card-foreground: #f4f1ea;
+  --muted: #1c1a18;
+  --muted-foreground: #a8a29a;
+  --border: #2a2724;
+  --ring: #57534e;
+  --destructive: #fb7185;
+  --destructive-foreground: #0c0b0a;
+  --accent: #f4f1ea;
 }
 
 @theme inline {
@@ -36,12 +40,18 @@
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-source-serif);
   --font-mono: var(--font-geist-mono);
 }
 
 * {
   border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -50,6 +60,75 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+::selection {
+  background: #1a1917;
+  color: #faf9f6;
+}
+
+.dark ::selection {
+  background: #f4f1ea;
+  color: #0c0b0a;
+}
+
+.article-body {
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--foreground);
+}
+
+.article-body h1,
+.article-body h2,
+.article-body h3 {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+
+.article-body h1 { font-size: 2rem; }
+.article-body h2 { font-size: 1.5rem; }
+.article-body h3 { font-size: 1.2rem; }
+
+.article-body p { margin: 1.15rem 0; }
+.article-body a { text-decoration: underline; text-underline-offset: 3px; }
+.article-body blockquote {
+  border-left: 3px solid var(--foreground);
+  padding-left: 1.1rem;
+  margin: 1.5rem 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.article-body ul, .article-body ol { margin: 1rem 0 1rem 1.4rem; }
+.article-body li { margin: 0.35rem 0; }
+.article-body code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.86em;
+  background: var(--muted);
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+}
+.article-body pre {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.article-body pre code { background: transparent; padding: 0; }
+.article-body table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.95rem; font-family: var(--font-sans), system-ui, sans-serif; }
+.article-body th, .article-body td { border: 1px solid var(--border); padding: 0.55rem 0.75rem; text-align: left; }
+.article-body th { background: var(--muted); font-weight: 600; }
+.article-body img { border-radius: 10px; margin: 1.5rem 0; max-width: 100%; }
+.article-body hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+.dark .hljs { background: transparent; color: #e7e5e4; }
 
 .w-md-editor {
   --md-editor-background-color: var(--card) !important;

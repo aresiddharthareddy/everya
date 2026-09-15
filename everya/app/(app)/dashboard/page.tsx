@@ -40,7 +40,7 @@ export default async function DashboardPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="font-serif text-3xl tracking-tight">Your desk</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Welcome back, {user.username ? formatUsername(user.username) : "there"}
           </p>
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
         {repos.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              No repositories yet. Create your first one.
+              No repositories yet. Create your first collection.
             </CardContent>
           </Card>
         ) : (
@@ -93,7 +93,10 @@ export default async function DashboardPage() {
             Recent documents
           </h2>
           <div className="space-y-2">
-            {recentDocs.map((doc) => (
+        {recentDocs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No stories yet. Open a collection and write.</p>
+            ) : (
+              recentDocs.map((doc) => (
               <Link
                 key={doc.id}
                 href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`}
@@ -102,7 +105,8 @@ export default async function DashboardPage() {
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 <span className="truncate">{doc.title}</span>
               </Link>
-            ))}
+            ))
+            )}
           </div>
         </div>
         <div>

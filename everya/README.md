@@ -249,7 +249,7 @@ On first run, the app automatically:
 
 | Environment | URL |
 |-------------|-----|
-| Local | [http://localhost](http://localhost) (port **80**) |
+| Local | [http://127.0.0.1:43123](http://127.0.0.1:43123) (port **43123**) |
 | Remote server | `http://YOUR_SERVER_IP` (use **http**, not https, unless you configure TLS) |
 
 > **Port 80 note:** Binding to port 80 on Linux often requires elevated privileges:
@@ -272,8 +272,8 @@ DATABASE_URL="file:./db/everya.db"
 BETTER_AUTH_SECRET="change-me-to-a-secure-random-string"
 
 # Must match how users access the app in the browser
-BETTER_AUTH_URL="http://localhost"
-NEXT_PUBLIC_APP_URL="http://localhost"
+BETTER_AUTH_URL="http://127.0.0.1:43123"
+NEXT_PUBLIC_APP_URL="http://127.0.0.1:43123"
 ```
 
 ### Remote server example
@@ -300,9 +300,9 @@ NEXT_PUBLIC_APP_URL="http://98.93.146.99"
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Dev server + auto DB setup (port 80) |
+| `npm run dev` | Dev server + auto DB setup (port 43123) |
 | `npm run build` | Production build |
-| `npm start` | Run production build (port 80) |
+| `npm start` | Run production build (port 43123) |
 | `npm run lint` | ESLint |
 | `npm run db:push` | Push Prisma schema to SQLite |
 | `npm run db:seed` | Seed demo content |
@@ -522,8 +522,16 @@ cd eveyra/everya
 cp .env.example .env
 npm install
 npm run dev
-# → http://localhost
+# → http://127.0.0.1:43123
 # Login: alex@everya.dev / demo12345
+```
+
+Temporary **offline Android APK** (does not replace the Next.js app; WebView of `apk/www`):
+
+```bash
+# Requires Android SDK + JDK
+bash scripts/build-apk.sh
+# → apk/EVERYA-offline.apk
 ```
 
 **Questions or issues?** Open an issue on [GitHub](https://github.com/aresiddharthareddy/eveyra/issues).

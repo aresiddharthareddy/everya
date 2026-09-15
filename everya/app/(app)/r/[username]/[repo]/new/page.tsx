@@ -12,9 +12,11 @@ export default function NewDocumentPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("# New Document\n\nStart writing...");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const submit = async () => {
     setLoading(true);
+    setError("");
     const res = await fetch("/api/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -28,6 +30,9 @@ export default function NewDocumentPage() {
     if (res.ok) {
       const doc = await res.json();
       router.push(`/r/${params.username}/${params.repo}/${doc.slug}/edit`);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Could not create the story");
     }
   };
 
@@ -40,6 +45,7 @@ export default function NewDocumentPage() {
         placeholder="Document title"
       />
       <MarkdownEditor value={content} onChange={setContent} />
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <Button onClick={submit} disabled={loading || !title}>
         {loading ? "Creating..." : "Create document"}
       </Button>

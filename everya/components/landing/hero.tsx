@@ -2,39 +2,37 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 export function LandingHero() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pt-24 pb-20 text-center">
+    <section className="mx-auto max-w-4xl px-6 pt-20 sm:pt-28 pb-16 text-center">
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.55, ease: "easeOut" }}
       >
-        <Badge variant="outline" className="mb-6">
-          Technical knowledge platform
-        </Badge>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight max-w-3xl mx-auto leading-[1.1]">
-          Structured knowledge for modern technical teams.
+        <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground mb-6">
+          Writing, structured
+        </p>
+        <h1 className="font-serif text-[2.4rem] sm:text-5xl md:text-[3.6rem] tracking-tight max-w-3xl mx-auto leading-[1.08]">
+          Stories worth keeping. Knowledge teams can actually use.
         </h1>
         <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Publish, organize, and measure documentation with enterprise-grade foundations.
-          Built for engineers who value clarity, speed, and information density.
+          EVERYA is a publishing platform for long-form writing and technical documentation —
+          the clarity of a magazine, the structure of a knowledge base.
         </p>
-        <div className="mt-10 flex flex-wrap justify-center gap-4">
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link
             href="/signup"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-foreground px-6 text-sm font-medium text-background hover:opacity-90"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-foreground px-7 text-sm font-medium text-background hover:opacity-90"
           >
-            Start free <ArrowRight className="h-4 w-4" />
+            Start writing
           </Link>
           <Link
             href="/explore"
-            className="inline-flex h-10 items-center justify-center rounded-md border border-border px-6 text-sm font-medium hover:bg-muted"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-border px-7 text-sm font-medium hover:bg-muted"
           >
-            Explore docs
+            Read stories
           </Link>
         </div>
       </motion.div>
