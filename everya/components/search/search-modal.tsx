@@ -10,8 +10,9 @@ import { ContentTypeBadge } from "@/components/content/content-type-badge";
 import type { SearchResult } from "@/types";
 
 const TYPE_META: Record<SearchResult["type"], { icon: typeof FileText; label: string }> = {
-  document: { icon: FileText, label: "Article" },
+  document: { icon: FileText, label: "Document" },
   repository: { icon: FolderGit2, label: "Collection" },
+  trace: { icon: FolderGit2, label: "Trace" },
   publication: { icon: Newspaper, label: "Publication" },
   author: { icon: User, label: "Author" },
 };
@@ -128,7 +129,19 @@ export function SearchModal() {
                   <p className="typo-nav truncate">{r.title}</p>
                   {r.subtitle && <p className="typo-meta truncate">{r.subtitle}</p>}
                 </div>
-                <ContentTypeBadge type={r.type === "document" ? "article" : r.type === "repository" ? "collection" : r.type === "publication" ? "publication" : "author"} />
+                <ContentTypeBadge
+                  type={
+                    r.type === "document"
+                      ? "article"
+                      : r.type === "trace"
+                        ? "trace"
+                        : r.type === "repository"
+                          ? "collection"
+                          : r.type === "publication"
+                            ? "publication"
+                            : "author"
+                  }
+                />
               </button>
             );
           })}

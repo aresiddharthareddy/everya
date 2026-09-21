@@ -4,7 +4,7 @@ import { getTraceTree, traceHref, assertCanViewTrace } from "@/services/traces";
 import { getDocumentStats, recordDocumentView } from "@/services/documents";
 import { getServerSession } from "@/lib/session";
 import { CommentSection } from "@/components/comments/comment-section";
-import { RepoTree } from "@/components/repos/repo-tree";
+import { KnowledgeTree } from "@/components/knowledge/knowledge-tree";
 import { ReadingProgress } from "@/components/docs/reading-progress";
 import { ArticleReader } from "@/components/reader/article-reader";
 import { ReaderBody } from "@/components/reader/reader-body";
@@ -84,7 +84,7 @@ export default async function TraceDocumentPage({
       <ReadingProgress />
       <ArticleReader
         content={document.content}
-        tree={<RepoTree tree={tree} basePath={basePath} activeSlug={docSlug} />}
+        tree={<KnowledgeTree tree={tree} basePath={basePath} activeSlug={docSlug} />}
       >
         <article data-article>
           <KnowledgeNav

@@ -11,7 +11,7 @@ export function ExploreSidebar({
   suggestedAuthors,
   followingSet,
   session,
-  collections,
+  traces,
 }: {
   tags: { name: string; slug: string; count?: number }[];
   activeTag?: string;
@@ -24,7 +24,7 @@ export function ExploreSidebar({
   }[];
   followingSet: Set<string>;
   session: { user: { id: string } } | null;
-  collections: {
+  traces: {
     id: string;
     name: string;
     slug: string;
@@ -68,18 +68,18 @@ export function ExploreSidebar({
         </Surface>
       )}
 
-      {collections.length > 0 && (
+      {traces.length > 0 && (
         <Surface variant="bordered" padding="md">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="typo-caption">Collections</h2>
-            <Link href="/publications" className="typo-meta hover:text-foreground motion-fast">
-              Publications →
+            <h2 className="typo-caption">Traces</h2>
+            <Link href="/create/import-trace" className="typo-meta hover:text-foreground motion-fast">
+              Import →
             </Link>
           </div>
           <ul className="space-y-3">
-            {collections.map((repo) => (
+            {traces.map((repo) => (
               <li key={repo.id}>
-                <Link href={`/r/${repo.owner.username}/${repo.slug}`} className="block group">
+                <Link href={`/u/${repo.owner.username}/trace/${repo.slug}`} className="block group">
                   <p className="typo-nav group-hover:underline">{repo.name}</p>
                   <p className="typo-meta">
                     {formatUsername(repo.owner.username)} · {repo._count.documents} documents

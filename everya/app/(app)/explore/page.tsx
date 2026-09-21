@@ -56,7 +56,7 @@ export default async function ExplorePage({
       include: { _count: { select: { documents: true } } },
     }),
     prisma.repository.findMany({
-      where: { visibility: "PUBLIC" },
+      where: { visibility: "PUBLIC", publication: null },
       include: { owner: { select: { username: true, name: true } }, _count: { select: { documents: true } } },
       orderBy: { updatedAt: "desc" },
       take: 6,
@@ -193,9 +193,9 @@ export default async function ExplorePage({
                   />
                 ) : (
                   <>
-                    {showFeatured && <FeedDocumentCard doc={featured} variant="featured" />}
+                    {showFeatured && <FeedDocumentCard doc={{ ...featured, signedIn: !!session }} variant="featured" />}
                     {feedDocs.map((doc) => (
-                      <FeedDocumentCard key={doc.id} doc={doc} />
+                      <FeedDocumentCard key={doc.id} doc={{ ...doc, signedIn: !!session }} />
                     ))}
                   </>
                 )}
@@ -218,7 +218,7 @@ export default async function ExplorePage({
             suggestedAuthors={suggestedAuthors}
             followingSet={followingSet}
             session={session}
-            collections={repos}
+            traces={repos}
           />
         </div>
       </div>

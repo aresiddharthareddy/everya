@@ -93,19 +93,24 @@ export default async function CreatePage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="typo-section-title">Collection</h2>
+                  <h2 className="typo-section-title">Trace</h2>
                   <p className="typo-body-sm text-muted-foreground mt-1">Structured knowledge with documents and folders.</p>
                 </div>
-                <Link href="/dashboard/new" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  New collection
-                </Link>
+                <div className="flex gap-2">
+                  <Link href="/dashboard/new" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    New trace
+                  </Link>
+                  <Link href="/create/import-trace" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    Import
+                  </Link>
+                </div>
               </div>
               {collections.length > 0 && (
                 <ul className="mt-3 space-y-2">
                   {collections.map((repo) => (
                     <li key={repo.slug}>
                       <Link
-                        href={`/r/${repo.owner.username}/${repo.slug}/new`}
+                        href={`/u/${repo.owner.username}/trace/${repo.slug}/new`}
                         className="typo-body-sm hover:underline underline-offset-4"
                       >
                         New document in {repo.name}

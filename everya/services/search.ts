@@ -12,6 +12,28 @@ export async function searchAll(
   const type = opts?.type ?? "all";
   const results: SearchResult[] = [];
 
+  if (type === "all") {
+    const traces = await prisma.repository.findMany({
+      where: {
+        visibility: "PUBLIC",
+        publication: null,
+        OR: [{ name: { contains: q } }, { description: { contains: q } }, { slug: { contains: q } }],
+      },
+      take: limit,
+      include: { owner: { select: { username: true } } },
+      orderBy: { updatedAt: "desc" },
+    });
+    results.push(
+      ...traces.map((t) => ({
+        type: "trace" as const,
+        id: t.id,
+        title: t.name,
+        subtitle: `@${t.owner.username}`,
+        href: `/u/${t.owner.username}/trace/${t.slug}`,
+      }))
+    );
+  }
+
   if (type === "all" || type === "publications") {
     const publications = await prisma.publication.findMany({
       where: {

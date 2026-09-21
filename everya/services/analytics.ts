@@ -7,6 +7,8 @@ export type AnalyticsEventType =
   | "unfollow"
   | "publication_follow"
   | "publication_unfollow"
+  | "trace_follow"
+  | "trace_unfollow"
   | "reaction"
   | "bookmark"
   | "comment"

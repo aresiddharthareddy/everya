@@ -101,6 +101,25 @@ export async function resolveDocumentTrace(documentId: string) {
   return toTrace(doc.repository);
 }
 
+export async function getDiscoverableTraces(limit = 12) {
+  const repos = await prisma.repository.findMany({
+    where: { visibility: "PUBLIC", publication: null },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    include: {
+      owner: { select: { username: true, name: true } },
+      _count: { select: { documents: true, followers: true } },
+    },
+  });
+  return repos.map((r) => ({
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    owner: r.owner,
+    _count: r._count,
+  }));
+}
+
 function toTrace(repo: {
   id: string;
   name: string;

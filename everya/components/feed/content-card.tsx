@@ -5,6 +5,8 @@ import { ContentTypeBadge } from "@/components/content/content-type-badge";
 import { EngagementStats } from "@/components/content/engagement-stats";
 import { TagPills } from "@/components/docs/tag-pills";
 import { Surface } from "@/components/ui/surface";
+import { ContentCardMenu } from "@/components/feed/content-card-menu";
+import { productTerms } from "@/lib/design-system";
 import type { ContentType } from "@/components/content/content-type-badge";
 
 export type ContentCardVariant = "featured" | "standard" | "compact";
@@ -31,6 +33,13 @@ export type ContentCardData = {
     slug: string;
     ownerUsername: string;
   } | null;
+  trace?: {
+    name: string;
+    slug: string;
+    ownerUsername: string;
+  } | null;
+  documentId?: string;
+  signedIn?: boolean;
   readingMinutes: number;
   readerCount: number;
   likeCount: number;
@@ -41,11 +50,11 @@ export type ContentCardData = {
 
 function ContextLine({
   publication,
-  collection,
+  trace,
   contentType,
 }: {
   publication?: ContentCardData["publication"];
-  collection?: ContentCardData["collection"];
+  trace?: ContentCardData["trace"];
   contentType: ContentType;
 }) {
   return (
@@ -58,18 +67,24 @@ function ContextLine({
           <Newspaper className="h-3 w-3" aria-hidden="true" />
           {publication.name}
         </Link>
-      ) : collection ? (
+      ) : trace ? (
         <Link
-          href={`/u/${collection.ownerUsername}/trace/${collection.slug}`}
+          href={`/u/${trace.ownerUsername}/trace/${trace.slug}`}
           className="inline-flex items-center gap-1.5 typo-caption normal-case tracking-normal text-foreground hover:underline underline-offset-4"
         >
           <FolderGit2 className="h-3 w-3" aria-hidden="true" />
-          {collection.name}
+          {trace.name}
+          <span className="typo-meta">· {productTerms.trace}</span>
         </Link>
       ) : null}
       <ContentTypeBadge type={contentType} />
     </div>
   );
+}
+
+function traceHrefFrom(data: ContentCardData) {
+  const t = data.trace ?? data.collection;
+  return t ? `/u/${t.ownerUsername}/trace/${t.slug}` : null;
 }
 
 function CoverVisual({ src, variant }: { src?: string | null; variant: ContentCardVariant }) {
@@ -112,7 +127,10 @@ export function ContentCard({ data, variant = "standard" }: { data: ContentCardD
     return (
       <article className="surface-interactive border-b border-border/70 last:border-0">
         <div className="py-3 px-1">
-          <ContextLine publication={data.publication} collection={data.collection} contentType={data.contentType} />
+          <div className="flex items-start justify-between gap-2">
+            <ContextLine publication={data.publication} trace={data.trace ?? data.collection} contentType={data.contentType} />
+            <ContentCardMenu documentId={data.documentId} href={data.href} traceHref={traceHrefFrom(data)} signedIn={data.signedIn} />
+          </div>
           <CardTitle href={data.href} title={data.title} variant="compact" />
           <p className="typo-meta mt-1">{data.readingMinutes} min</p>
         </div>
@@ -129,7 +147,7 @@ export function ContentCard({ data, variant = "standard" }: { data: ContentCardD
               <div className="flex-1 min-w-0">
                 <ContextLine
                   publication={data.publication}
-                  collection={data.collection}
+                  trace={data.trace ?? data.collection}
                   contentType={data.contentType}
                 />
                 <div className="mt-4">
@@ -177,10 +195,13 @@ export function ContentCard({ data, variant = "standard" }: { data: ContentCardD
           <div className="flex items-start justify-between gap-3">
             <ContextLine
               publication={data.publication}
-              collection={data.collection}
+              trace={data.trace ?? data.collection}
               contentType={data.contentType}
             />
-            <span className="typo-meta shrink-0">{data.readingMinutes} min</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="typo-meta">{data.readingMinutes} min</span>
+              <ContentCardMenu documentId={data.documentId} href={data.href} traceHref={traceHrefFrom(data)} signedIn={data.signedIn} />
+            </div>
           </div>
           <CardTitle href={data.href} title={data.title} variant="standard" />
           {data.excerpt && (

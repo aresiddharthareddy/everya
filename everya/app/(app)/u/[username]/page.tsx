@@ -14,6 +14,7 @@ import { formatUsername, formatCount } from "@/lib/utils";
 const tabs = [
   { id: "articles", label: "Articles" },
   { id: "publications", label: "Publications" },
+  { id: "traces", label: "Traces" },
   { id: "about", label: "About" },
 ] as const;
 
@@ -48,7 +49,7 @@ export default async function ProfilePage({
   if (!user) notFound();
   const isOwner = session?.user.id === user.id;
 
-  const [articles, ownedPublications, memberPublications, followerCount, followingCount, isFollowing] =
+  const [articles, ownedPublications, memberPublications, traces, followerCount, followingCount, isFollowing] =
     await Promise.all([
       prisma.document.findMany({
         where: {
@@ -85,6 +86,15 @@ export default async function ProfilePage({
             include: { _count: { select: { followers: true, articles: true } } },
           },
         },
+      }),
+      prisma.repository.findMany({
+        where: {
+          ownerId: user.id,
+          publication: null,
+          ...(isOwner ? {} : { visibility: "PUBLIC" }),
+        },
+        orderBy: { updatedAt: "desc" },
+        include: { _count: { select: { documents: true, followers: true } } },
       }),
       prisma.userFollow.count({ where: { followingId: user.id } }),
       prisma.userFollow.count({ where: { followerId: user.id } }),
@@ -205,6 +215,34 @@ export default async function ProfilePage({
                     </div>
                     <p className="typo-meta">
                       {pub._count.articles} articles · {formatCount(pub._count.followers)} followers
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "traces" && (
+          <section className="mt-8">
+            {traces.length === 0 ? (
+              <EmptyState
+                title="No traces yet"
+                description={isOwner ? "Create or import a trace to organize structured knowledge." : "This author has no public traces."}
+                actionLabel={isOwner ? "Create trace" : undefined}
+                actionHref={isOwner ? "/dashboard/new" : undefined}
+              />
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-3">
+                {traces.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/u/${username}/trace/${t.slug}`}
+                    className="surface-bordered p-4 hover:bg-muted/30 motion-fast"
+                  >
+                    <span className="typo-nav block">{t.name}</span>
+                    <p className="typo-meta mt-1">
+                      {t._count.documents} documents · {formatCount(t._count.followers)} followers
                     </p>
                   </Link>
                 ))}

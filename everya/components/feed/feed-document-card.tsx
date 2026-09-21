@@ -16,6 +16,7 @@ export type FeedDocument = {
   tags: { tag: { name: string; slug: string } }[];
   _count: { likes: number; comments: number };
   ratings?: { value: number }[];
+  signedIn?: boolean;
 };
 
 function avgRating(values: { value: number }[] = []) {
@@ -25,6 +26,13 @@ function avgRating(values: { value: number }[] = []) {
 
 export function toContentCardData(doc: FeedDocument): ContentCardData {
   const hasPublication = !!doc.publication;
+  const trace = hasPublication
+    ? null
+    : {
+        name: doc.repository.name,
+        slug: doc.repository.slug,
+        ownerUsername: doc.repository.owner.username,
+      };
   return {
     href: articleHref(doc),
     title: doc.title,
@@ -34,13 +42,10 @@ export function toContentCardData(doc: FeedDocument): ContentCardData {
     contentType: hasPublication ? "article" : "document",
     author: doc.author,
     publication: doc.publication,
-    collection: hasPublication
-      ? null
-      : {
-          name: doc.repository.name,
-          slug: doc.repository.slug,
-          ownerUsername: doc.repository.owner.username,
-        },
+    trace,
+    collection: trace,
+    documentId: doc.id,
+    signedIn: doc.signedIn,
     readingMinutes: doc.readingMinutes,
     readerCount: doc.readerCount,
     likeCount: doc._count.likes,

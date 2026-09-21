@@ -1,7 +1,7 @@
 import type { RepositoryVisibility } from "@prisma/client";
 
 export interface SearchResult {
-  type: "document" | "repository" | "publication" | "author";
+  type: "document" | "repository" | "trace" | "publication" | "author";
   id: string;
   title: string;
   subtitle?: string;

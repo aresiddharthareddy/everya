@@ -7,6 +7,7 @@ const config = {
   document: { label: productTerms.document, icon: FileText },
   publication: { label: productTerms.publication, icon: Newspaper },
   collection: { label: productTerms.collection, icon: FolderGit2 },
+  trace: { label: productTerms.trace, icon: FolderGit2 },
   author: { label: productTerms.author, icon: User },
 } as const;
 
