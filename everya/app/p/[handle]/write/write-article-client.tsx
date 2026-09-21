@@ -7,7 +7,6 @@ import { ExternalLink } from "lucide-react";
 import { MarkdownEditor } from "@/components/docs/markdown-editor";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LoadingState } from "@/components/everya/loading-state";
 import { ErrorState } from "@/components/everya/error-state";
 
 type InitialArticle = {
@@ -33,21 +32,10 @@ export function WriteArticleClient({
   const [docId, setDocId] = useState(initial?.id ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [status, setStatus] = useState(initial?.status ?? "DRAFT");
-  const [loading, setLoading] = useState(!!initial?.id && !initial);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
-  const [missing, setMissing] = useState(false);
-
-  useEffect(() => {
-    if (initial === null) {
-      setMissing(true);
-      setLoading(false);
-    } else if (initial) {
-      setLoading(false);
-    }
-  }, [initial]);
 
   const ensureDraft = useCallback(async () => {
     if (docId || creating) return docId;
@@ -121,8 +109,7 @@ export function WriteArticleClient({
     router.push(`/p/${handle}/${article.slug}`);
   };
 
-  if (loading) return <LoadingState label="Opening editor…" />;
-  if (missing) {
+  if (initial === null) {
     return (
       <ErrorState
         title="Article not found"
