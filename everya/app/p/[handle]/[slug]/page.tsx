@@ -5,7 +5,10 @@ import { getDocumentStats, recordDocumentView } from "@/services/documents";
 import { getMemberRole } from "@/services/publications";
 import { getServerSession } from "@/lib/session";
 import { canViewArticle } from "@/lib/permissions/document";
-import { canPublishArticle } from "@/lib/permissions/publication";
+import { canPublishArticle, roleAtLeast } from "@/lib/permissions/publication";
+import { checkContentEntitlement } from "@/services/entitlements";
+import { PremiumPaywall } from "@/components/creator/premium-paywall";
+import { AccessBadge } from "@/components/creator/access-badge";
 import { CommentSection } from "@/components/comments/comment-section";
 import { HashScroll } from "@/components/navigation/hash-scroll";
 import { documentPageMetadata } from "@/lib/page-metadata";
@@ -61,8 +64,11 @@ export default async function PublicationArticlePage({ params }: Props) {
 
   const isAuthor = session?.user.id === document.authorId;
   const canEdit = isAuthor || (memberRole ? canPublishArticle(memberRole) : false);
-
-  await recordDocumentView(document.id, session?.user.id);
+  const entitlement = await checkContentEntitlement(document, session?.user.id, {
+    publicationRole: memberRole ? roleAtLeast(memberRole, "CONTRIBUTOR") : false,
+  });
+  const canReadContent = entitlement.allowed;
+  if (canReadContent) await recordDocumentView(document.id, session?.user.id);
 
   const [stats, comments, userLike, userBookmark, userRating, commentCount, isFollowingAuthor, isFollowingPub] =
     await Promise.all([
@@ -107,7 +113,7 @@ export default async function PublicationArticlePage({ params }: Props) {
     <>
       <HashScroll />
       <ReadingProgress />
-      <ArticleReader content={document.content}>
+      <ArticleReader content={canReadContent ? document.content : ""}>
         <article data-article>
           <ReaderArticleHeader
             title={document.title}
@@ -119,6 +125,7 @@ export default async function PublicationArticlePage({ params }: Props) {
             publication={{ name: pub.name, handle: pub.handle }}
             author={document.author}
             tags={document.tags.map((t) => t.tag)}
+            badge={<AccessBadge level={document.accessLevel} />}
             stats={stats}
             commentCount={commentCount}
             documentId={document.id}
@@ -127,7 +134,15 @@ export default async function PublicationArticlePage({ params }: Props) {
             editHref={canEdit ? `/p/${handle}/write?id=${document.id}` : undefined}
             shareUrl={shareUrl}
           />
-          <ReaderBody content={document.content} />
+          {canReadContent ? (
+            <ReaderBody content={document.content} />
+          ) : (
+            <PremiumPaywall
+              accessLevel={document.accessLevel}
+              creatorUsername={document.author.username}
+              signedIn={!!session}
+            />
+          )}
           <ReaderAuthorCard
             author={document.author}
             signedIn={!!session}

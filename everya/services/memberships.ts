@@ -1,6 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import type { MembershipPlanTier } from "@prisma/client";
 
+export async function listCreatorPlans(creatorId: string) {
+  return prisma.membershipPlan.findMany({
+    where: { creatorId },
+    include: {
+      publication: { select: { handle: true, name: true } },
+      repository: { select: { slug: true, name: true, owner: { select: { username: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export async function listPlansForScope(scope: {
   publicationId?: string;
   repositoryId?: string;

@@ -14,6 +14,10 @@ import { ReaderAuthorCard } from "@/components/reader/reader-author-card";
 import { StickyEngagementBar } from "@/components/reader/sticky-engagement-bar";
 import { KnowledgeNav } from "@/components/navigation/knowledge-nav";
 import { formatUsername } from "@/lib/utils";
+import { getTraceRole, canEditTraceContent } from "@/lib/permissions/trace";
+import { checkContentEntitlement } from "@/services/entitlements";
+import { PremiumPaywall } from "@/components/creator/premium-paywall";
+import { AccessBadge } from "@/components/creator/access-badge";
 
 export default async function DocumentPage({
   params,
@@ -49,7 +53,11 @@ export default async function DocumentPage({
   if (!canViewRepo(document.repository, session?.user.id)) notFound();
 
   const isAuthor = session?.user.id === document.authorId;
-  await recordDocumentView(document.id, session?.user.id);
+  const traceRole = session ? await getTraceRole(document.repositoryId, session.user.id) : null;
+  const canEdit = traceRole ? canEditTraceContent(traceRole) : false;
+  const entitlement = await checkContentEntitlement(document, session?.user.id, { traceEditor: canEdit });
+  const canReadContent = entitlement.allowed;
+  if (canReadContent) await recordDocumentView(document.id, session?.user.id);
 
   const [stats, tree, comments, userLike, userBookmark, userRating, commentCount, isFollowing] = await Promise.all([
     getDocumentStats(document.id),
@@ -85,7 +93,7 @@ export default async function DocumentPage({
     <>
       <ReadingProgress />
       <ArticleReader
-        content={document.content}
+        content={canReadContent ? document.content : ""}
         tree={<RepoTree tree={tree} basePath={basePath} activeSlug={docSlug} />}
       >
         <article data-article>
@@ -110,6 +118,7 @@ export default async function DocumentPage({
             }}
             author={document.author}
             tags={document.tags.map((t) => t.tag)}
+            badge={<AccessBadge level={document.accessLevel} />}
             stats={stats}
             commentCount={commentCount}
             documentId={document.id}
@@ -117,7 +126,15 @@ export default async function DocumentPage({
             follow={{ authorFollowing: isFollowing, isAuthor }}
             editHref={isAuthor ? `${basePath}/${docSlug}/edit` : undefined}
           />
-          <ReaderBody content={document.content} />
+          {canReadContent ? (
+            <ReaderBody content={document.content} />
+          ) : (
+            <PremiumPaywall
+              accessLevel={document.accessLevel}
+              creatorUsername={document.repository.owner.username}
+              signedIn={!!session}
+            />
+          )}
           <ReaderAuthorCard author={document.author} signedIn={!!session} isFollowing={isFollowing} isSelf={isAuthor} />
           <CommentSection documentId={document.id} initialComments={serializedComments} currentUserId={session?.user.id} />
         </article>

@@ -23,11 +23,16 @@ export default async function CreatorDashboardPage() {
           title="Creator dashboard"
           description="Publications, traces, members, and revenue from real data."
           actions={
-            <Link href="/creator/analytics">
-              <Button variant="outline" size="sm">
-                <TrendingUp className="h-4 w-4" /> Analytics
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/creator/plans">
+                <Button variant="outline" size="sm">Plans</Button>
+              </Link>
+              <Link href="/creator/analytics">
+                <Button variant="outline" size="sm">
+                  <TrendingUp className="h-4 w-4" /> Analytics
+                </Button>
+              </Link>
+            </div>
           }
         />
 

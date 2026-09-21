@@ -84,7 +84,7 @@ Version: **6.0.0**
 ## Known limitations
 
 1. Stripe SDK not installed; checkout is abstraction-only.
-2. Publication article pages need entitlement parity (trace path complete).
+2. ~~Publication article pages need entitlement parity~~ ✅ `/p/` and `/r/` routes now use `checkContentEntitlement`.
 3. Payout transfers not executed.
 4. Lint errors from Phase 5 hooks/components unchanged.
 
