@@ -13,7 +13,9 @@ export type AnalyticsEventType =
   | "bookmark"
   | "comment"
   | "publication_created"
-  | "article_published";
+  | "article_published"
+  | "knowledge_link_created"
+  | "knowledge_link_removed";
 
 export async function trackEvent(input: {
   eventType: AnalyticsEventType;

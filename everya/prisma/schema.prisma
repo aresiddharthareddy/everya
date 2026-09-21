@@ -57,9 +57,15 @@ enum TraceRole {
 
 enum DocumentLinkType {
   RELATED
+  REFERENCES
+  DEPENDS_ON
   PREVIOUS
   NEXT
   PART_OF
+}
+
+enum TraceLinkType {
+  RELATED
 }
 
 enum ContentAccessLevel {
@@ -144,6 +150,8 @@ model User {
   paymentTransactions  PaymentTransaction[]
   creatorRevenues      CreatorRevenue[]       @relation("RevenueCreator")
   payoutBalance        CreatorPayoutBalance?
+  documentLinksCreated DocumentLink[]        @relation("DocumentLinkCreator")
+  traceLinksCreated    TraceLink[]           @relation("TraceLinkCreator")
 }
 
 model Session {
@@ -250,6 +258,8 @@ model Repository {
   members            TraceMember[]
   membershipPlans    MembershipPlan[]
   creatorMemberships CreatorMembership[]
+  linksFrom          TraceLink[]           @relation("TraceLinkFrom")
+  linksTo            TraceLink[]           @relation("TraceLinkTo")
 
   @@unique([ownerId, slug])
 }
@@ -526,10 +536,29 @@ model DocumentLink {
   toDocumentId   String
   toDocument     Document         @relation("DocumentLinkTo", fields: [toDocumentId], references: [id], onDelete: Cascade)
   type           DocumentLinkType
+  createdById    String?
+  createdBy      User?            @relation("DocumentLinkCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt      DateTime         @default(now())
 
   @@unique([fromDocumentId, toDocumentId, type])
-  @@index([toDocumentId])
+  @@index([fromDocumentId, type])
+  @@index([toDocumentId, type])
+}
+
+model TraceLink {
+  id               String        @id @default(cuid())
+  fromRepositoryId String
+  fromRepository   Repository    @relation("TraceLinkFrom", fields: [fromRepositoryId], references: [id], onDelete: Cascade)
+  toRepositoryId   String
+  toRepository     Repository    @relation("TraceLinkTo", fields: [toRepositoryId], references: [id], onDelete: Cascade)
+  type             TraceLinkType @default(RELATED)
+  createdById      String?
+  createdBy        User?         @relation("TraceLinkCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+
+  @@unique([fromRepositoryId, toRepositoryId, type])
+  @@index([fromRepositoryId])
+  @@index([toRepositoryId])
 }
 
 model DocumentView {

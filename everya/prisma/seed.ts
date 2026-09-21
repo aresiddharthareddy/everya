@@ -377,14 +377,25 @@ async function main() {
 
   await prisma.documentLink.createMany({
     data: [
-      { fromDocumentId: gettingStarted.id, toDocumentId: apiDesign.id, type: "NEXT" },
-      { fromDocumentId: apiDesign.id, toDocumentId: gettingStarted.id, type: "PREVIOUS" },
-      { fromDocumentId: gettingStarted.id, toDocumentId: k8sRunbook.id, type: "RELATED" },
+      { fromDocumentId: gettingStarted.id, toDocumentId: apiDesign.id, type: "NEXT", createdById: alex.id },
+      { fromDocumentId: apiDesign.id, toDocumentId: gettingStarted.id, type: "PREVIOUS", createdById: alex.id },
+      { fromDocumentId: gettingStarted.id, toDocumentId: apiDesign.id, type: "REFERENCES", createdById: alex.id },
+      { fromDocumentId: apiDesign.id, toDocumentId: gettingStarted.id, type: "DEPENDS_ON", createdById: alex.id },
+      { fromDocumentId: gettingStarted.id, toDocumentId: k8sRunbook.id, type: "RELATED", createdById: alex.id },
     ],
   });
 
   await prisma.traceMember.create({
     data: { repositoryId: platformRepo.id, userId: infraops.id, role: "EDITOR" },
+  });
+
+  await prisma.traceLink.create({
+    data: {
+      fromRepositoryId: platformRepo.id,
+      toRepositoryId: runbooksRepo.id,
+      type: "RELATED",
+      createdById: alex.id,
+    },
   });
 
   for (const [followerId, followingId] of [

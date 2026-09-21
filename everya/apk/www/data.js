@@ -1,5 +1,5 @@
 const DATA = {
-  version: "6.0.0",
+  version: "7.0.0",
   paymentConfigured: false,
   creators: [
     { username: "alex", tagline: "Building EveryA — knowledge for engineering teams.", members: 1, plans: 2 },
@@ -27,6 +27,10 @@ const DATA = {
           excerpt: "Learn how to use EVERYA for your team",
           author: "alex", lastEditor: "infraops",
           next: "api-design",
+          links: [
+            { type: "REFERENCES", target: "api-design", label: "API Design Guidelines" },
+            { type: "RELATED", target: "api-design", label: "API Design Guidelines" },
+          ],
           content: `# Getting Started with EVERYA\n\nEVERYA is a **technical knowledge platform** for engineering teams.\n\n## Quick start\n\n\`\`\`bash\nnpm install && npm run dev\n\`\`\`\n\n## Core concepts\n\n- **Trace** — structured knowledge collection\n- **Document** — Markdown pages with metrics\n- **Folder** — nested organization\n\n> Ship documentation that engineers actually read.` },
         { slug: "api-design", title: "API Design Guidelines", folder: "Guides / API", minutes: 8, readers: 9400,
           accessLevel: "PREMIUM",
@@ -34,6 +38,10 @@ const DATA = {
           author: "alex", lastEditor: "alex",
           prev: "getting-started",
           related: ["getting-started"],
+          links: [
+            { type: "DEPENDS_ON", target: "getting-started", label: "Getting Started" },
+            { type: "REFERENCES", target: "getting-started", label: "Getting Started", inbound: true },
+          ],
           content: `# API Design Guidelines\n\n## Principles\n\n- **Consistency** over cleverness\n- **Explicit** error responses\n- **Versioned** endpoints\n\nAll write endpoints require a valid session.` },
       ],
       draftDocs: [
@@ -93,6 +101,9 @@ const DATA = {
     { id: "n3", type: "TRACE", title: "Trace followed", message: "@kernel followed Platform Docs", actor: "kernel", href: "#/u/alex/trace/platform-docs", read: true },
   ],
   exploreTags: ["kubernetes", "api-design", "observability", "platform", "sre", "research"],
+  traceLinks: [
+    { from: "alex/platform-docs", to: "infraops/sre-runbooks", label: "SRE Runbooks" },
+  ],
 };
 
 DATA.feed = DATA.traces.flatMap((t) =>

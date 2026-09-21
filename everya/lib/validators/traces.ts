@@ -11,5 +11,5 @@ export const updateTraceMemberRoleSchema = z.object({
 
 export const documentLinkSchema = z.object({
   toDocumentId: z.string().min(1),
-  type: z.enum(["RELATED", "PREVIOUS", "NEXT", "PART_OF"]),
+  type: z.enum(["RELATED", "REFERENCES", "DEPENDS_ON", "PREVIOUS", "NEXT", "PART_OF"]),
 });

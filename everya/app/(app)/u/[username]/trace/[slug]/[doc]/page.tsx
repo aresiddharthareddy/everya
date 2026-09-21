@@ -5,8 +5,8 @@ import { documentPageMetadata } from "@/lib/page-metadata";
 import { documentSharePath } from "@/lib/share-url";
 import { HashScroll } from "@/components/navigation/hash-scroll";
 import { getTraceTree, traceHref, assertCanViewTrace } from "@/services/traces";
-import { getDocumentLinks } from "@/services/document-links";
-import { DocumentRelationships } from "@/components/knowledge/document-relationships";
+import { getDocumentKnowledge } from "@/services/knowledge";
+import { DocumentKnowledgePanel } from "@/components/knowledge/document-knowledge-panel";
 import { DocumentContributors } from "@/components/knowledge/document-contributors";
 import { getDocumentContributors } from "@/services/collaboration";
 import { DocumentNavFooter } from "@/components/reader/document-nav-footer";
@@ -91,7 +91,7 @@ export default async function TraceDocumentPage({
   const canReadContent = entitlement.allowed;
   if (canReadContent) await recordDocumentView(document.id, session?.user.id);
 
-  const [stats, tree, comments, userLike, userBookmark, userRating, commentCount, isFollowing, docLinks, contributors] = await Promise.all([
+  const [stats, tree, comments, userLike, userBookmark, userRating, commentCount, isFollowing, knowledge, contributors] = await Promise.all([
     getDocumentStats(document.id),
     getTraceTree(document.repositoryId, { includeDrafts: canEdit }),
     prisma.comment.findMany({
@@ -112,14 +112,7 @@ export default async function TraceDocumentPage({
     session && session.user.id !== document.authorId
       ? prisma.userFollow.findUnique({ where: { followerId_followingId: { followerId: session.user.id, followingId: document.authorId } } }).then((r) => !!r)
       : Promise.resolve(false),
-    getDocumentLinks(document.id).then((links) =>
-      links.map((l) => ({
-        id: l.id,
-        type: l.type,
-        href: traceHref(document.repository) + `/${l.document.slug}`,
-        document: { title: l.document.title },
-      }))
-    ),
+    getDocumentKnowledge(document.id, session?.user.id),
     getDocumentContributors(document.id),
   ]);
 
@@ -129,7 +122,14 @@ export default async function TraceDocumentPage({
     publicationId: document.publicationId,
     repository: document.repository,
   });
-  const docNav = resolveDocNav(docLinks, tree, basePath, docSlug);
+  const navLinks = knowledge
+    ? [...knowledge.outbound, ...knowledge.inbound].map((l) => ({
+        type: l.type,
+        href: l.href,
+        document: { title: l.document.title },
+      }))
+    : [];
+  const docNav = resolveDocNav(navLinks, tree, basePath, docSlug);
   const serializedComments = comments.map((c) => ({
     ...c,
     createdAt: c.createdAt.toISOString(),
@@ -185,7 +185,17 @@ export default async function TraceDocumentPage({
               signedIn={!!session}
             />
           )}
-          <DocumentRelationships links={docLinks} />
+          {knowledge && (
+            <DocumentKnowledgePanel
+              trace={knowledge.trace}
+              outbound={knowledge.outbound}
+              inbound={knowledge.inbound}
+              references={knowledge.references}
+              referencedBy={knowledge.referencedBy}
+              dependencies={knowledge.dependencies}
+              partOf={knowledge.partOf}
+            />
+          )}
           {contributors && <DocumentContributors contributors={contributors.contributors} />}
           <DocumentNavFooter
             previous={docNav.previous}

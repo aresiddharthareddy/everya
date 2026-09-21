@@ -98,6 +98,7 @@ export async function searchAll(
       include: {
         publication: { select: { handle: true, name: true } },
         repository: { select: { slug: true, name: true, owner: { select: { username: true } } } },
+        _count: { select: { linksFrom: true, linksTo: true } },
       },
       orderBy: { updatedAt: "desc" },
     });
@@ -107,8 +108,8 @@ export async function searchAll(
         id: d.id,
         title: d.title,
         subtitle: d.publication
-          ? `${d.publication.name} · @${d.publication.handle}`
-          : `${d.repository.name} · @${d.repository.owner.username}`,
+          ? `${d.publication.name} · @${d.publication.handle} · ${d._count.linksFrom + d._count.linksTo} links`
+          : `${d.repository.name} · @${d.repository.owner.username} · ${d._count.linksFrom + d._count.linksTo} links`,
         href: d.publication
           ? `/p/${d.publication.handle}/${d.slug}`
           : `/u/${d.repository.owner.username}/trace/${d.repository.slug}/${d.slug}`,

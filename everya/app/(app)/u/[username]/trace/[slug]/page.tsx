@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { tracePageHref } from "@/lib/share-url";
-import { Download, FileText, Plus, Upload } from "lucide-react";
+import { Download, FileText, GitBranch, Plus, Upload } from "lucide-react";
 import {
   getTraceByPath,
   getTraceTree,
@@ -101,6 +101,11 @@ export default async function TracePage({
           description={trace.description || undefined}
           actions={
             <div className="flex flex-wrap gap-2">
+              <Link href={`${basePath}/knowledge`}>
+                <Button variant="outline" size="sm">
+                  <GitBranch className="h-4 w-4" /> Knowledge
+                </Button>
+              </Link>
               <TraceFollowButton
                 username={trace.owner.username}
                 slug={trace.slug}

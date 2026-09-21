@@ -152,6 +152,34 @@ function viewExplore() {
     <h2 class="section">Publications</h2>${pubs}`;
 }
 
+function knowledgeSection(u, s, d) {
+  const item = doc(u, s, d);
+  if (!item?.links?.length) return "";
+  const rows = item.links.map((l) => {
+    const href = `#/u/${u}/trace/${s}/${l.target}`;
+    const tag = l.inbound ? "Referenced by" : l.type.replace(/_/g, " ");
+    return `<a class="tree-item" href="${href}"><span>${esc(tag)}</span><span>${esc(l.label)}</span></a>`;
+  }).join("");
+  return `<h2 class="section">Knowledge</h2><div class="tree">${rows}</div>`;
+}
+
+function viewTraceKnowledge(u, s, docSlug) {
+  const t = trace(u, s);
+  if (!t) return `<p>Trace not found.</p>`;
+  const selected = docSlug || t.docs[0]?.slug;
+  const edges = t.docs.flatMap((d) =>
+    (d.links || []).map((l) => ({ from: d.slug, to: l.target, type: l.type, label: l.label }))
+  );
+  const related = (DATA.traceLinks || []).filter((l) => l.from === `${u}/${s}`);
+  return `<h1 class="page-title">Knowledge · ${esc(t.name)}</h1>
+    <a class="btn" href="#/u/${u}/trace/${s}">← Back to trace</a>
+    <h2 class="section">Documents</h2>
+    <div class="tree">${t.docs.map((d) => `<a class="tree-item ${d.slug===selected?"on":""}" href="#/u/${u}/trace/${s}/knowledge/${d.slug}">${esc(d.title)}</a>`).join("")}</div>
+    <h2 class="section">Connections</h2>
+    <div class="tree">${edges.filter((e) => e.from === selected).map((e) => `<a class="tree-item" href="#/u/${u}/trace/${s}/${e.to}"><span>${esc(e.type)}</span><span>${esc(e.label)}</span></a>`).join("") || `<p class="lede">No links.</p>`}</div>
+    ${related.length ? `<h2 class="section">Related traces</h2><div class="chips">${related.map((r) => `<a class="chip" href="#/u/${r.to.replace("/","/trace/")}">${esc(r.label)}</a>`).join("")}</div>` : ""}`;
+}
+
 function viewTrace(u, s) {
   const t = trace(u, s);
   if (!t) return `<p>Trace not found.</p>`;
@@ -175,6 +203,7 @@ function viewTrace(u, s) {
       <button class="btn solid" onclick="toggleTraceFollow('${u}','${s}')">${following ? "Following" : "Follow trace"}</button>
       <button class="btn" onclick="shareLink('#/u/${u}/trace/${s}')">Share</button>
       <a class="btn" href="#/profile/${u}">Profile</a>
+      <a class="btn" href="#/u/${u}/trace/${s}/knowledge">Knowledge map</a>
     </div>
     ${contributorsHtml(t.contributors)}
     ${draftList ? `<h2 class="section">Drafts</h2><div class="tree">${draftList}</div>` : ""}
@@ -221,6 +250,7 @@ function viewDoc(u, s, d, isDraft) {
       ${isDraft ? `<a class="chip" href="#/create">Edit draft</a>` : ""}
     </div>
     ${allowed ? `<article class="body" id="article-body">${md(item.content)}</article>` : `<div class="card flat"><p class="lede"><strong>${esc(item.accessLevel)} content.</strong> Join membership to read this document.</p><a class="btn solid" href="#/memberships">View memberships</a></div>`}
+    ${!isDraft ? knowledgeSection(u, s, d) : ""}
     ${!isDraft ? docNavFooter(u, s, item) : ""}
     <section id="discussion">
       <h2 class="section">Discussion</h2>
@@ -456,7 +486,8 @@ function route() {
   else if (parts[0] === "creator" && parts[1]) html = viewCreator(parts[1]);
   else if (parts[0] === "memberships") html = viewMemberships();
   else if (parts[0] === "profile" && parts[1]) html = viewProfile(parts[1]);
-  else if (parts[0] === "u" && parts[2] === "trace" && parts[3] && parts[4]) {
+  else if (parts[0] === "u" && parts[2] === "trace" && parts[4] === "knowledge") html = viewTraceKnowledge(parts[1], parts[3], parts[5]);
+  else if (parts[0] === "u" && parts[2] === "trace" && parts[3] && parts[4] && parts[4] !== "knowledge") {
     const isDraft = !!draftDoc(parts[1], parts[3], parts[4]) && !doc(parts[1], parts[3], parts[4]);
     html = viewDoc(parts[1], parts[3], parts[4], isDraft);
   }

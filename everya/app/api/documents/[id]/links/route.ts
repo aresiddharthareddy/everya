@@ -10,8 +10,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth.api.getSession({ headers: await headers() });
   const { id } = await params;
-  const links = await getDocumentLinks(id);
+  const links = await getDocumentLinks(id, session?.user.id);
   return jsonData({
     links: links.map((l) => ({
       id: l.id,

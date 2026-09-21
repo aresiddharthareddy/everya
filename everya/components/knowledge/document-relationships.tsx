@@ -3,8 +3,10 @@ import { ArrowLeft, ArrowRight, Link2, Layers } from "lucide-react";
 import type { DocumentLinkType } from "@prisma/client";
 import { linkTypeLabel } from "@/services/document-links";
 
-const icons: Record<DocumentLinkType, typeof Link2> = {
+const icons: Partial<Record<DocumentLinkType, typeof Link2>> = {
   RELATED: Link2,
+  REFERENCES: Link2,
+  DEPENDS_ON: Layers,
   PREVIOUS: ArrowLeft,
   NEXT: ArrowRight,
   PART_OF: Layers,
@@ -35,7 +37,7 @@ export function DocumentRelationships({
       <h2 className="typo-caption mb-4">Related in this trace</h2>
       <div className="space-y-4">
         {(Object.keys(grouped) as DocumentLinkType[]).map((type) => {
-          const Icon = icons[type];
+          const Icon = icons[type] || Link2;
           return (
             <div key={type}>
               <p className="typo-meta mb-2">{linkTypeLabel(type)}</p>
