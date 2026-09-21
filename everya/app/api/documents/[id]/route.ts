@@ -1,18 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { autosaveDocument } from "@/services/documents";
+import { updateDocumentSchema } from "@/lib/validators";
+import { unauthorized, badRequest, notFound, jsonData, tooManyRequests } from "@/lib/api-response";
+import { clientRateLimitKey, rateLimit } from "@/lib/rate-limit";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorized();
+
+  const limit = rateLimit({
+    key: clientRateLimitKey(req, `autosave:${session.user.id}`),
+    limit: 120,
+    windowMs: 60_000,
+  });
+  if (!limit.ok) return tooManyRequests();
 
   const { id } = await params;
-  const body = await req.json();
-  const doc = await autosaveDocument(id, session.user.id, body);
-  if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(doc);
+  const parsed = updateDocumentSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return badRequest(parsed.error.issues[0]?.message || "Invalid input", parsed.error.flatten());
+  }
+
+  const doc = await autosaveDocument(id, session.user.id, parsed.data);
+  if (!doc) return notFound();
+  return jsonData(doc);
 }

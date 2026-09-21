@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
+import { ensureTags } from "../lib/seed-tags";
 
 const prisma = new PrismaClient();
 

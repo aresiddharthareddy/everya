@@ -4,6 +4,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
 import { createCommentSchema } from "@/lib/validators";
+import {
+  assertDocumentAccessible,
+  commentParentMatchesDocument,
+} from "@/lib/permissions/document";
 import { unauthorized, badRequest, notFound, jsonData, tooManyRequests } from "@/lib/api-response";
 import { clientRateLimitKey, rateLimit } from "@/lib/rate-limit";
 
@@ -24,11 +28,15 @@ export async function POST(req: NextRequest) {
   }
 
   const { documentId, content, parentId } = parsed.data;
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
-    include: { repository: { select: { slug: true, owner: { select: { username: true } } } } },
-  });
+  const document = await assertDocumentAccessible(documentId, session.user.id);
   if (!document) return notFound();
+
+  if (parentId) {
+    const parent = await prisma.comment.findUnique({ where: { id: parentId } });
+    if (!commentParentMatchesDocument(parent, documentId)) {
+      return badRequest("Parent comment does not belong to this document");
+    }
+  }
 
   const comment = await prisma.comment.create({
     data: {
@@ -45,7 +53,7 @@ export async function POST(req: NextRequest) {
   const link = `/r/${document.repository.owner.username}/${document.repository.slug}/${document.slug}`;
   if (parentId) {
     const parent = await prisma.comment.findUnique({ where: { id: parentId } });
-    if (parent) {
+    if (parent && parent.authorId !== session.user.id) {
       await notify({
         userId: parent.authorId,
         actorId: session.user.id,
@@ -55,7 +63,7 @@ export async function POST(req: NextRequest) {
         link,
       });
     }
-  } else {
+  } else if (document.authorId !== session.user.id) {
     await notify({
       userId: document.authorId,
       actorId: session.user.id,

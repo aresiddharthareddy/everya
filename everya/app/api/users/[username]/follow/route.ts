@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { unauthorized, badRequest, notFound, jsonData, tooManyRequests } from "@/lib/api-response";
+import { clientRateLimitKey, rateLimit } from "@/lib/rate-limit";
 
 async function sessionUser() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -17,7 +19,7 @@ export async function GET(
     where: { username: username.replace(/^@/, "") },
     select: { id: true },
   });
-  if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (!target) return notFound("User not found");
 
   const [followerCount, user] = await Promise.all([
     prisma.userFollow.count({ where: { followingId: target.id } }),
@@ -32,25 +34,30 @@ export async function GET(
     following = !!row;
   }
 
-  return NextResponse.json({ following, followerCount });
+  return jsonData({ following, followerCount });
 }
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ username: string }> }
 ) {
   const user = await sessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
+
+  const limit = rateLimit({
+    key: clientRateLimitKey(req, `follow:${user.id}`),
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (!limit.ok) return tooManyRequests();
 
   const { username } = await params;
   const target = await prisma.user.findUnique({
     where: { username: username.replace(/^@/, "") },
     select: { id: true, username: true },
   });
-  if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (target.id === user.id) {
-    return NextResponse.json({ error: "Cannot follow yourself" }, { status: 400 });
-  }
+  if (!target) return notFound("User not found");
+  if (target.id === user.id) return badRequest("Cannot follow yourself");
 
   const existing = await prisma.userFollow.findUnique({
     where: { followerId_followingId: { followerId: user.id, followingId: target.id } },
@@ -65,5 +72,5 @@ export async function POST(
   }
 
   const followerCount = await prisma.userFollow.count({ where: { followingId: target.id } });
-  return NextResponse.json({ following: !existing, followerCount });
+  return jsonData({ following: !existing, followerCount });
 }

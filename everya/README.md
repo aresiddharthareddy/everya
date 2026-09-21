@@ -394,7 +394,7 @@ everya/
 
 ## API reference
 
-See **[EVERYA_API.md](../../EVERYA_API.md)** for the full API reference (health, follow, tags, rate limits, error format).
+See **[EVERYA_API.md](../docs/EVERYA_API.md)** for the full API reference (health, follow, tags, rate limits, error format).
 
 ---
 
