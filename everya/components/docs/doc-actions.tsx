@@ -101,11 +101,11 @@ export function DocActions({
           </button>
         ))}
       </div>
-      <Button variant={liked ? "secondary" : "outline"} size="sm" onClick={toggleLike} className="rounded-full">
+      <Button variant={liked ? "default" : "outline"} size="sm" onClick={toggleLike}>
         <Heart className={cn("h-3.5 w-3.5", liked && "fill-current")} />
         {likes > 0 ? likes : "Like"}
       </Button>
-      <Button variant={bookmarked ? "secondary" : "outline"} size="sm" onClick={toggleBookmark} className="rounded-full">
+      <Button variant={bookmarked ? "default" : "outline"} size="sm" onClick={toggleBookmark}>
         <Bookmark className={cn("h-3.5 w-3.5", bookmarked && "fill-current")} />
         {bookmarked ? "Saved" : "Save"}
       </Button>

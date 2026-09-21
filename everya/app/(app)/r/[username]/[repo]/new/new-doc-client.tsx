@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { MarkdownEditor } from "@/components/docs/markdown-editor";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { EditorChrome } from "@/components/editor/editor-chrome";
 
 export function NewDocumentClient() {
   const params = useParams();
@@ -14,41 +14,48 @@ export function NewDocumentClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const username = params.username as string;
+  const repo = params.repo as string;
+
   const submit = async () => {
     setLoading(true);
     setError("");
     const res = await fetch("/api/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        content,
-        repoSlug: params.repo,
-      }),
+      body: JSON.stringify({ title, content, repoSlug: repo }),
     });
     setLoading(false);
     if (res.ok) {
       const doc = await res.json();
-      router.push(`/r/${params.username}/${params.repo}/${doc.slug}/edit`);
+      router.push(`/r/${username}/${repo}/${doc.slug}/edit`);
     } else {
       const data = await res.json().catch(() => ({}));
-      setError(data.error || "Could not create the story");
+      setError(data.error || "Could not create the document");
     }
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-4">
+    <EditorChrome
+      backHref={`/r/${username}/${repo}`}
+      backLabel="Back to collection"
+      statusLabel="New document"
+      error={error || undefined}
+      primaryAction={submit}
+      primaryLabel={loading ? "Creating…" : "Create document"}
+      primaryLoading={loading}
+    >
       <Input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="text-xl font-semibold"
+        className="typo-section-title"
         placeholder="Document title"
+        aria-label="Document title"
+        required
       />
-      <MarkdownEditor value={content} onChange={setContent} />
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button onClick={submit} disabled={loading || !title}>
-        {loading ? "Creating..." : "Create document"}
-      </Button>
-    </div>
+      <div className="mt-6">
+        <MarkdownEditor value={content} onChange={setContent} />
+      </div>
+    </EditorChrome>
   );
 }

@@ -3,63 +3,71 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Bookmark, BarChart3, LayoutDashboard, Newspaper, Plus, Settings, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { useSession } from "@/lib/auth-client";
 import { useUIStore } from "@/hooks/use-ui-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { AppBrand } from "@/components/navigation/app-brand";
+import { NavLink } from "@/components/navigation/nav-link";
+import { isCollectionActive, isNavActive, primaryNav, secondaryNav } from "@/lib/navigation";
 
-const navItems = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/explore", label: "Explore", icon: BookOpen },
-  { href: "/publications/new", label: "Publications", icon: Newspaper },
-  { href: "/reading-list", label: "Library", icon: Bookmark },
-  { href: "/stats", label: "Stats", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
-
-export function LeftSidebar({ repositories }: { repositories?: { id: string; name: string; slug: string; ownerUsername: string }[] }) {
+export function LeftSidebar({
+  repositories,
+  overlayOnly = false,
+}: {
+  repositories?: { id: string; name: string; slug: string; ownerUsername: string }[];
+  overlayOnly?: boolean;
+}) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const { sidebarOpen, mobileNavOpen, setMobileNavOpen } = useUIStore();
 
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname, setMobileNavOpen]);
 
+  const navItems = [
+    ...primaryNav.filter((item) => !item.requiresAuth || session),
+    ...secondaryNav.filter((item) => !item.requiresAuth || session),
+  ];
+
   const content = (
     <aside className="flex h-full w-60 flex-col border-r border-border bg-card">
       <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <Link href="/" className="font-semibold tracking-[0.16em] text-xs">
-          EVERYA
-        </Link>
-        <Button variant="ghost" size="icon" className="lg:hidden h-7 w-7" onClick={() => setMobileNavOpen(false)}>
+        <AppBrand />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+          aria-label="Close navigation"
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors",
-                active ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto p-3 space-y-1" aria-label="Main">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            active={isNavActive(pathname, item.href)}
+            onClick={() => setMobileNavOpen(false)}
+          />
+        ))}
 
-        {repositories && repositories.length > 0 && (
+        {session && repositories && repositories.length > 0 && (
           <div className="pt-4">
             <div className="flex items-center justify-between px-2.5 mb-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Collections</span>
-              <Link href="/dashboard/new" className="text-muted-foreground hover:text-foreground">
+              <span className="typo-caption">Collections</span>
+              <Link
+                href="/dashboard/new"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted motion-fast"
+                aria-label="New collection"
+              >
                 <Plus className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -68,9 +76,9 @@ export function LeftSidebar({ repositories }: { repositories?: { id: string; nam
                 key={repo.id}
                 href={`/r/${repo.ownerUsername}/${repo.slug}`}
                 className={cn(
-                  "block rounded-md px-2.5 py-1.5 text-sm truncate transition-colors",
-                  pathname.includes(`/${repo.slug}`)
-                    ? "bg-muted text-foreground font-medium"
+                  "block rounded-md px-2.5 py-2 typo-body-sm truncate motion-fast min-h-[44px] flex items-center",
+                  isCollectionActive(pathname, repo.slug)
+                    ? "bg-foreground/8 text-foreground font-semibold"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
@@ -85,10 +93,17 @@ export function LeftSidebar({ repositories }: { repositories?: { id: string; nam
 
   return (
     <>
-      <div className={cn("hidden lg:block shrink-0", !sidebarOpen && "lg:hidden")}>{content}</div>
+      {!overlayOnly && (
+        <div className={cn("hidden lg:block shrink-0", !sidebarOpen && "lg:hidden")}>{content}</div>
+      )}
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-background/80" onClick={() => setMobileNavOpen(false)} />
+          <button
+            type="button"
+            className="absolute inset-0 bg-background/80"
+            aria-label="Close navigation"
+            onClick={() => setMobileNavOpen(false)}
+          />
           <div className="absolute left-0 top-0 h-full">{content}</div>
         </div>
       )}

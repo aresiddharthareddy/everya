@@ -46,9 +46,9 @@ export function FollowButton({
     <Button
       size="sm"
       variant={following ? "outline" : "default"}
-      className="rounded-full"
       onClick={toggle}
       disabled={busy}
+      aria-pressed={following}
     >
       {following ? "Following" : "Follow"}
     </Button>

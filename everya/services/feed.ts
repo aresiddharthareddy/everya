@@ -120,6 +120,7 @@ function feedInclude(_userId?: string) {
     publication: { select: { id: true, name: true, handle: true, logo: true } },
     repository: { select: { slug: true, name: true, owner: { select: { username: true } } } },
     tags: { include: { tag: { select: { name: true, slug: true } } } },
+    ratings: { select: { value: true } },
     _count: { select: { likes: true, comments: true } },
   };
 }

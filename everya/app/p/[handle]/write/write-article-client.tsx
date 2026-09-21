@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ExternalLink } from "lucide-react";
 import { MarkdownEditor } from "@/components/docs/markdown-editor";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { EditorChrome } from "@/components/editor/editor-chrome";
 import { ErrorState } from "@/components/everya/error-state";
 
 type InitialArticle = {
@@ -119,43 +117,38 @@ export function WriteArticleClient({
   }
 
   const previewHref = slug ? `/p/${handle}/${slug}` : null;
+  const statusLabel =
+    saving || creating ? "Saving…" : status === "PUBLISHED" ? "Published" : "Saved automatically";
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-4">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <Link href={`/p/${handle}`} className="text-sm text-muted-foreground hover:text-foreground">
-          ← {handle}
-        </Link>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground">
-            {error ? error : saving || creating ? "Saving…" : status === "PUBLISHED" ? "Published" : "Saved automatically"}
-          </span>
-          {previewHref && (
-            <Link href={previewHref} target="_blank">
-              <Button variant="outline" size="sm" className="rounded-full">
-                <ExternalLink className="h-3.5 w-3.5" /> Preview
-              </Button>
-            </Link>
-          )}
-          <Button size="sm" className="rounded-full" onClick={publish} disabled={publishing || creating}>
-            {publishing ? "Publishing…" : status === "PUBLISHED" ? "Update" : "Publish"}
-          </Button>
-        </div>
-      </div>
-
+    <EditorChrome
+      backHref={`/p/${handle}`}
+      backLabel={handle}
+      statusLabel={statusLabel}
+      statusVariant={status === "PUBLISHED" ? "success" : "secondary"}
+      error={error || undefined}
+      previewHref={previewHref}
+      primaryAction={publish}
+      primaryLabel={publishing ? "Publishing…" : status === "PUBLISHED" ? "Update" : "Publish"}
+      primaryLoading={publishing || creating}
+    >
       <Input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="text-2xl font-serif border-0 px-0 focus-visible:ring-0"
+        className="typo-page-title border-0 px-0 focus-visible:ring-0"
         placeholder="Title"
+        aria-label="Article title"
       />
       <Input
         value={subtitle}
         onChange={(e) => setSubtitle(e.target.value)}
-        className="text-lg text-muted-foreground border-0 px-0 focus-visible:ring-0"
+        className="typo-article-subtitle text-muted-foreground border-0 px-0 focus-visible:ring-0 mt-2"
         placeholder="Subtitle (optional)"
+        aria-label="Article subtitle"
       />
-      <MarkdownEditor value={content} onChange={setContent} onSave={save} />
-    </div>
+      <div className="mt-6">
+        <MarkdownEditor value={content} onChange={setContent} onSave={save} />
+      </div>
+    </EditorChrome>
   );
 }

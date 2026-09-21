@@ -42,7 +42,6 @@ export function PublicationFollowButton({
     <Button
       size="sm"
       variant={following ? "outline" : "default"}
-      className="rounded-full"
       onClick={toggle}
       disabled={busy}
     >

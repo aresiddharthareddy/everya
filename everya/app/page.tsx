@@ -31,7 +31,7 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 chrome-bar">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-6">
           <Link href="/" className="font-semibold tracking-[0.2em] text-[11px]">
             EVERYA

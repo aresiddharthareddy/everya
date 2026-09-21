@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { Users, FileText, BookOpen, Globe, ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
-import { articleHref } from "@/services/feed";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { TabsNav } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/everya/empty-state";
 import { FollowButton } from "@/components/social/follow-button";
+import { FeedDocumentCard } from "@/components/feed/feed-document-card";
 import { formatUsername, formatCount } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 const tabs = [
   { id: "articles", label: "Articles" },
@@ -57,8 +58,10 @@ export default async function ProfilePage({
         orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
         take: 50,
         include: {
-          publication: { select: { handle: true, name: true } },
-          repository: { select: { slug: true, visibility: true, owner: { select: { username: true } } } },
+          publication: { select: { handle: true, name: true, logo: true } },
+          repository: { select: { slug: true, name: true, visibility: true, owner: { select: { username: true } } } },
+          tags: { include: { tag: { select: { name: true, slug: true } } } },
+          _count: { select: { likes: true, comments: true } },
         },
       }),
       prisma.publication.findMany({
@@ -104,33 +107,15 @@ export default async function ProfilePage({
   const totalReaders = visibleArticles.reduce((s, d) => s + d.readerCount, 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur z-10">
-        <div className="mx-auto max-w-4xl px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-semibold text-xs tracking-[0.16em]">
-            EVERYA
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/explore" className="text-sm text-muted-foreground hover:text-foreground">
-              Explore
-            </Link>
-            {session && (
-              <Link href="/reading-list" className="text-sm text-muted-foreground hover:text-foreground">
-                Reading list
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-6 py-12">
+    <div className="min-h-full bg-background">
+      <div className="page-container py-page max-w-4xl">
         <div className="flex items-start gap-6">
           <Avatar src={user.image} name={user.name || user.username} size="lg" />
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h1 className="font-serif text-3xl tracking-tight">{user.name || formatUsername(user.username)}</h1>
-                <p className="text-muted-foreground">{formatUsername(user.username)}</p>
+                <h1 className="typo-page-title">{user.name || formatUsername(user.username)}</h1>
+                <p className="typo-meta mt-1">{formatUsername(user.username)}</p>
               </div>
               <FollowButton
                 username={user.username}
@@ -140,62 +125,57 @@ export default async function ProfilePage({
               />
             </div>
             {user.bio && tab !== "about" && (
-              <p className="text-sm mt-3 max-w-lg leading-relaxed text-muted-foreground line-clamp-2">{user.bio}</p>
+              <p className="typo-body-sm mt-3 max-w-lg text-muted-foreground line-clamp-2">{user.bio}</p>
             )}
-            <div className="flex flex-wrap gap-4 mt-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-4 mt-4 typo-meta">
               <span className="flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" /> {formatCount(followerCount)} followers · {followingCount} following
+                <Users className="h-3.5 w-3.5" aria-hidden="true" /> {formatCount(followerCount)} followers · {followingCount} following
               </span>
               <span className="flex items-center gap-1">
-                <BookOpen className="h-3.5 w-3.5" /> {publications.length} publications
+                <BookOpen className="h-3.5 w-3.5" aria-hidden="true" /> {publications.length} publications
               </span>
               <span className="flex items-center gap-1">
-                <FileText className="h-3.5 w-3.5" /> {visibleArticles.length} articles
+                <FileText className="h-3.5 w-3.5" aria-hidden="true" /> {visibleArticles.length} articles
               </span>
               <span>{formatCount(totalReaders)} readers</span>
             </div>
           </div>
         </div>
 
-        <nav className="flex gap-1 border-b border-border mt-10">
-          {tabs.map((t) => (
-            <Link
-              key={t.id}
-              href={`/u/${username}?tab=${t.id}`}
-              className={cn(
-                "px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px",
-                tab === t.id
-                  ? "border-foreground text-foreground font-medium"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </nav>
+        <TabsNav
+          className="mt-10"
+          ariaLabel="Profile sections"
+          activeId={tab}
+          items={tabs.map((t) => ({
+            id: t.id,
+            label: t.label,
+            href: `/u/${username}?tab=${t.id}`,
+          }))}
+        />
 
         {tab === "articles" && (
           <section className="mt-8">
             {visibleArticles.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No published articles yet.</p>
+              <EmptyState
+                title="No articles yet"
+                description={isOwner ? "Publish your first article from a publication." : "This author has not published articles yet."}
+                actionLabel={isOwner ? "Create" : undefined}
+                actionHref={isOwner ? "/create" : undefined}
+              />
             ) : (
-              <div className="divide-y divide-border rounded-xl border border-border">
+              <div>
                 {visibleArticles.map((doc) => (
-                  <Link
+                  <FeedDocumentCard
                     key={doc.id}
-                    href={articleHref(doc)}
-                    className="flex items-center justify-between px-4 py-3.5 text-sm hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <span className="font-medium block truncate">{doc.title}</span>
-                      {doc.publication && (
-                        <span className="text-xs text-muted-foreground">{doc.publication.name}</span>
-                      )}
-                    </div>
-                    <span className="text-muted-foreground text-xs shrink-0 ml-4">
-                      {formatCount(doc.readerCount)} readers
-                    </span>
-                  </Link>
+                    doc={{
+                      ...doc,
+                      author: { username: user.username, name: user.name, image: user.image },
+                      excerpt: doc.excerpt,
+                      readerCount: doc.readerCount,
+                      ratings: [],
+                    }}
+                    variant="compact"
+                  />
                 ))}
               </div>
             )}
@@ -205,20 +185,25 @@ export default async function ProfilePage({
         {tab === "publications" && (
           <section className="mt-8">
             {publications.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No publications yet.</p>
+              <EmptyState
+                title="No publications yet"
+                description={isOwner ? "Start a publication to publish articles." : "This author has no public publications."}
+                actionLabel={isOwner ? "New publication" : undefined}
+                actionHref={isOwner ? "/publications/new" : undefined}
+              />
             ) : (
               <div className="grid sm:grid-cols-2 gap-3">
                 {publications.map((pub) => (
                   <Link
                     key={pub.id}
                     href={`/p/${pub.handle}`}
-                    className="rounded-xl border border-border p-4 hover:bg-muted/50 transition-colors"
+                    className="surface-bordered p-4 hover:bg-muted/30 motion-fast"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium">{pub.name}</span>
+                      <span className="typo-nav">{pub.name}</span>
                       <Badge variant="outline">{pub.role}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="typo-meta">
                       {pub._count.articles} articles · {formatCount(pub._count.followers)} followers
                     </p>
                   </Link>
@@ -232,36 +217,36 @@ export default async function ProfilePage({
           <section className="mt-8 space-y-6">
             {user.bio ? (
               <div>
-                <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Bio</h2>
-                <p className="text-sm leading-relaxed text-muted-foreground max-w-lg">{user.bio}</p>
+                <h2 className="typo-caption mb-2">Bio</h2>
+                <p className="typo-body-sm text-muted-foreground max-w-lg">{user.bio}</p>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No bio yet.</p>
+              <p className="typo-body-sm text-muted-foreground">No bio yet.</p>
             )}
             {user.website && (
               <div>
-                <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Website</h2>
+                <h2 className="typo-caption mb-2">Website</h2>
                 <a
                   href={user.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-foreground hover:underline"
+                  className="inline-flex items-center gap-1.5 typo-body-sm hover:underline"
                 >
-                  <Globe className="h-3.5 w-3.5" />
+                  <Globe className="h-3.5 w-3.5" aria-hidden="true" />
                   {user.website.replace(/^https?:\/\//, "")}
                   <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </a>
               </div>
             )}
             <div>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Member since</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="typo-caption mb-2">Member since</h2>
+              <p className="typo-body-sm text-muted-foreground">
                 {user.createdAt.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
               </p>
             </div>
           </section>
         )}
-      </main>
+      </div>
     </div>
   );
 }

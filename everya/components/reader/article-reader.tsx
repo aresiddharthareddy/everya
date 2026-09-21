@@ -21,17 +21,38 @@ export function ArticleReader({
   const [tocOpen, setTocOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
 
+  const drawer = (side: "left" | "right", open: boolean, onClose: () => void, title: string, body: React.ReactNode) =>
+    open && (
+      <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={title}>
+        <button type="button" className="absolute inset-0 bg-background/60" aria-label="Close panel" onClick={onClose} />
+        <aside
+          className={cn(
+            "relative h-full bg-card border-border shadow-2xl overflow-y-auto motion-normal",
+            side === "right" ? "ml-auto w-80 max-w-[90vw] border-l" : "w-72 max-w-[85vw] border-r"
+          )}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="typo-nav">{title}</h3>
+            <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="p-4">{body}</div>
+        </aside>
+      </div>
+    );
+
   return (
-    <div className="relative min-h-full bg-background">
-      {/* floating controls */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+    <div className="relative min-h-full bg-background pb-24">
+      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end gap-2">
         <ReaderToolbar className="shadow-lg" />
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="rounded-full shadow-md bg-card/95 backdrop-blur h-9"
+            className="shadow-sm bg-card min-h-[44px]"
             onClick={() => setTocOpen((o) => !o)}
+            aria-expanded={tocOpen}
           >
             <ListTree className="h-3.5 w-3.5 mr-1.5" /> Contents
           </Button>
@@ -39,8 +60,9 @@ export function ArticleReader({
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full shadow-md bg-card/95 backdrop-blur h-9"
+              className="shadow-sm bg-card min-h-[44px]"
               onClick={() => setTreeOpen((o) => !o)}
+              aria-expanded={treeOpen}
             >
               Collection
             </Button>
@@ -48,39 +70,10 @@ export function ArticleReader({
         </div>
       </div>
 
-      {/* TOC drawer */}
-      {tocOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={() => setTocOpen(false)} />
-          <aside className="relative w-80 max-w-[90vw] h-full bg-card border-l border-border shadow-2xl overflow-y-auto p-6 animate-in slide-in-from-right">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-medium">Table of contents</h3>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTocOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <TableOfContents content={content} />
-          </aside>
-        </div>
-      )}
+      {drawer("right", tocOpen, () => setTocOpen(false), "Table of contents", <TableOfContents content={content} />)}
+      {drawer("left", treeOpen && !!tree, () => setTreeOpen(false), "In this collection", tree)}
 
-      {/* Collection tree drawer */}
-      {treeOpen && tree && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={() => setTreeOpen(false)} />
-          <aside className="relative w-72 max-w-[85vw] h-full bg-card border-r border-border shadow-2xl overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="text-sm font-medium">In this collection</h3>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTreeOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            {tree}
-          </aside>
-        </div>
-      )}
-
-      <div className={cn("mx-auto px-5 sm:px-8 py-8 sm:py-14", widthClass[contentWidth], focusMode && "max-w-3xl")}>
+      <div className={cn("mx-auto px-page py-page read-container", widthClass[contentWidth], focusMode && "max-w-3xl")}>
         {children}
       </div>
     </div>

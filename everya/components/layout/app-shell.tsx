@@ -22,21 +22,11 @@ export function AppShell({
   const pathname = usePathname();
   const readerMode = isArticleReader(pathname);
 
-  if (readerMode) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <ReaderTopBar />
-        <main className="flex-1">{children}</main>
-        <SearchModal />
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <LeftSidebar repositories={repositories} />
+      <LeftSidebar repositories={repositories} overlayOnly={readerMode} />
       <div className="flex flex-1 flex-col min-w-0">
-        <TopBar />
+        {readerMode ? <ReaderTopBar /> : <TopBar />}
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
       <SearchModal />

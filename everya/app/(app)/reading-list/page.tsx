@@ -5,7 +5,11 @@ import { Bookmark } from "lucide-react";
 import { getServerSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { articleHref } from "@/services/feed";
-import { formatUsername, formatCount } from "@/lib/utils";
+import { formatUsername } from "@/lib/utils";
+import { PageHeader } from "@/components/navigation/page-header";
+import { EmptyState } from "@/components/everya/empty-state";
+import { FeedDocumentCard } from "@/components/feed/feed-document-card";
+import { Surface } from "@/components/ui/surface";
 
 export default async function ReadingListPage() {
   const session = await getServerSession();
@@ -18,10 +22,11 @@ export default async function ReadingListPage() {
       include: {
         document: {
           include: {
-            author: { select: { username: true, name: true } },
-            publication: { select: { handle: true, name: true } },
+            author: { select: { username: true, name: true, image: true } },
+            publication: { select: { handle: true, name: true, logo: true } },
             repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
             tags: { include: { tag: { select: { name: true, slug: true } } } },
+            _count: { select: { likes: true, comments: true } },
           },
         },
       },
@@ -33,9 +38,9 @@ export default async function ReadingListPage() {
       include: {
         document: {
           include: {
-            author: { select: { username: true, name: true } },
-            publication: { select: { handle: true, name: true } },
-            repository: { select: { slug: true, owner: { select: { username: true } } } },
+            author: { select: { username: true, name: true, image: true } },
+            publication: { select: { handle: true, name: true, logo: true } },
+            repository: { select: { slug: true, name: true, owner: { select: { username: true } } } },
           },
         },
       },
@@ -43,83 +48,68 @@ export default async function ReadingListPage() {
   ]);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl tracking-tight">Reading list</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {bookmarks.length} saved {bookmarks.length === 1 ? "story" : "stories"}
-        </p>
-      </div>
+    <div className="page-container py-page max-w-2xl">
+      <PageHeader
+        eyebrow="Library"
+        title="Your library"
+        description={`${bookmarks.length} saved ${bookmarks.length === 1 ? "article" : "articles"} · continue reading and bookmarks in one place.`}
+      />
 
       {continueReading.length > 0 && (
         <section className="mb-12">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">
-            Continue reading
-          </h2>
-          <div className="divide-y divide-border rounded-xl border border-border">
+          <h2 className="typo-caption mb-4">Continue reading</h2>
+          <Surface variant="bordered" className="divide-y divide-border overflow-hidden">
             {continueReading.map((row) => {
               const doc = row.document;
               const href = articleHref(doc);
               const pct = Math.round(row.progress * 100);
               return (
-                <Link key={row.id} href={href} className="block px-4 py-4 hover:bg-muted/50 transition-colors group">
-                  <p className="text-xs text-muted-foreground">
+                <Link key={row.id} href={href} className="block px-4 py-4 hover:bg-muted/40 motion-fast group min-h-[44px]">
+                  <p className="typo-meta">
                     {doc.author.name || formatUsername(doc.author.username)}
                     {doc.publication ? ` · ${doc.publication.name}` : ""}
                   </p>
-                  <h3 className="mt-1 font-serif text-lg tracking-tight group-hover:underline underline-offset-4">
-                    {doc.title}
-                  </h3>
+                  <h3 className="mt-1 typo-nav group-hover:underline underline-offset-4">{doc.title}</h3>
                   <div className="mt-3 flex items-center gap-3">
-                    <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-foreground rounded-full" style={{ width: `${pct}%` }} />
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                      <div className="h-full bg-foreground rounded-full motion-normal" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0">{pct}%</span>
+                    <span className="typo-meta shrink-0">{pct}%</span>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="mt-2 typo-meta">
                     {doc.readingMinutes} min · updated {formatDistanceToNow(row.updatedAt, { addSuffix: true })}
                   </p>
                 </Link>
               );
             })}
-          </div>
+          </Surface>
         </section>
       )}
 
       {bookmarks.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-12 text-center">
-          <Bookmark className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Save stories to read later from any article.</p>
-          <Link href="/explore" className="inline-block mt-4 text-sm font-medium hover:underline">
-            Explore stories
-          </Link>
-        </div>
+        <EmptyState
+          title="No bookmarks yet"
+          description="Save articles to read later from any article page."
+          actionLabel="Explore"
+          actionHref="/explore"
+          icon={<Bookmark className="h-8 w-8" />}
+        />
       ) : (
         <section>
-          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">Saved</h2>
-          <div className="divide-y divide-border">
-            {bookmarks.map((b) => {
-              const doc = b.document;
-              const href = articleHref(doc);
-              return (
-                <Link key={b.id} href={href} className="block py-6 group">
-                  <p className="text-xs text-muted-foreground">
-                    {doc.author.name || formatUsername(doc.author.username)}
-                    {doc.publication ? ` · ${doc.publication.name}` : ` · ${doc.repository.name}`}
-                  </p>
-                  <h2 className="mt-1 font-serif text-xl tracking-tight group-hover:underline underline-offset-4">
-                    {doc.title}
-                  </h2>
-                  {doc.excerpt && (
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">{doc.excerpt}</p>
-                  )}
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {doc.readingMinutes} min · {formatCount(doc.readerCount)} readers · saved{" "}
-                    {formatDistanceToNow(b.createdAt, { addSuffix: true })}
-                  </p>
-                </Link>
-              );
-            })}
+          <h2 className="typo-caption mb-4">Saved</h2>
+          <div>
+            {bookmarks.map((b) => (
+              <FeedDocumentCard
+                key={b.id}
+                doc={{
+                  ...b.document,
+                  excerpt: b.document.excerpt,
+                  readerCount: b.document.readerCount,
+                  ratings: [],
+                }}
+                variant="compact"
+              />
+            ))}
           </div>
         </section>
       )}

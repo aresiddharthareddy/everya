@@ -7,7 +7,7 @@ export function Breadcrumbs({
   items: { label: string; href?: string }[];
 }) {
   return (
-    <nav className="flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1 typo-body-sm text-muted-foreground flex-wrap">
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-1">
           {i > 0 && <ChevronRight className="h-3 w-3" />}

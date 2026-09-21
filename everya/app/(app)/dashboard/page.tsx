@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getWriterStats } from "@/services/stats";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/navigation/page-header";
 import { formatUsername, formatCount, formatRating } from "@/lib/utils";
 
 export default async function DashboardPage() {
@@ -39,27 +40,26 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-full bg-muted/15">
-      <div className="mx-auto max-w-5xl px-5 sm:px-8 py-10 space-y-10">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">Home</p>
-            <h1 className="font-serif text-3xl tracking-tight">
-              {user.username ? formatUsername(user.username) : "Your desk"}
-            </h1>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/stats">
-              <Button variant="outline" size="sm" className="rounded-full">
-                <BarChart3 className="h-4 w-4" /> Stats
-              </Button>
-            </Link>
-            <Link href="/dashboard/new">
-              <Button size="sm" className="rounded-full">
-                <Plus className="h-4 w-4" /> New collection
-              </Button>
-            </Link>
-          </div>
-        </div>
+      <div className="page-container py-page max-w-5xl space-y-10">
+        <PageHeader
+          eyebrow="Creator"
+          title={user.username ? formatUsername(user.username) : "Your desk"}
+          description="Your writing workspace — collections, drafts, and quick stats."
+          actions={
+            <div className="flex gap-2">
+              <Link href="/stats">
+                <Button variant="outline" size="sm">
+                  <BarChart3 className="h-4 w-4" /> Stats
+                </Button>
+              </Link>
+              <Link href="/create">
+                <Button size="sm">
+                  <Plus className="h-4 w-4" /> Create
+                </Button>
+              </Link>
+            </div>
+          }
+        />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[

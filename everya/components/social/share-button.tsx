@@ -18,7 +18,7 @@ export function ShareButton() {
   };
 
   return (
-    <Button variant="outline" size="sm" className="rounded-full" onClick={copy}>
+    <Button variant="outline" size="sm" onClick={copy} aria-label={copied ? "Link copied" : "Copy link to share"}>
       {copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
       {copied ? "Copied" : "Share"}
     </Button>
