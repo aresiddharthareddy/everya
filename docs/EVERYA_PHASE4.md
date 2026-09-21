@@ -21,7 +21,7 @@
 | 4.11 | Document relationships | ⬜ |
 | 4.12 | Contributors / ownership | ⬜ |
 | 4.13 | Export foundation | ⬜ |
-| 4.14 | Mobile / APK | ⬜ |
+| 4.14 | Mobile / APK | ✅ |
 | 4.15 | Security audit + verification | ⬜ |
 
 ## Key docs

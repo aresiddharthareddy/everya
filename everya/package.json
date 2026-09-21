@@ -14,7 +14,8 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
-    "import:cursor-skills": "tsx scripts/import-cursor-skills-repo.ts"
+    "import:cursor-skills": "tsx scripts/import-cursor-skills-repo.ts",
+    "build:apk": "powershell -ExecutionPolicy Bypass -File scripts/build-apk.ps1"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

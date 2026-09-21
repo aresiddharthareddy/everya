@@ -1,4 +1,7 @@
 plugins { id 'com.android.application' }
+
+def appUrl = findProperty('EVERYA_APP_URL') ?: 'http://98.93.146.99'
+
 android {
   namespace 'com.everya.offline'
   compileSdk 34
@@ -6,8 +9,12 @@ android {
     applicationId 'com.everya.offline'
     minSdk 24
     targetSdk 34
-    versionCode 1
-    versionName '1.0'
+    versionCode 4
+    versionName '4.0.0'
+    buildConfigField 'String', 'EVERYA_APP_URL', "\"${appUrl}\""
+  }
+  buildFeatures {
+    buildConfig true
   }
   buildTypes {
     release {

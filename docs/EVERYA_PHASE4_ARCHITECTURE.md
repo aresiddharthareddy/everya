@@ -155,17 +155,17 @@ Publications remain a separate editorial layer (1:1 with a backing `Repository` 
 
 ---
 
-## Mobile / APK (current state)
+## Mobile / APK (Phase 4.14)
 
 | Item | Detail |
 |------|--------|
 | Framework | Android native shell (`apk/android/`) |
-| UI | WebView → `file:///android_asset/www/index.html` |
-| Bundle | Static offline HTML/JS in `apk/www/` (`index.html`, `data.js`) |
-| Backend | **Not connected** to Next.js API — demo reader only |
-| Build | Gradle (`compileSdk 34`, `com.everya.offline`) |
+| UI | WebView → hosted EVERYA (`EVERYA_APP_URL`, default `http://98.93.146.99`) |
+| Offline | `apk/www/offline.html` retry screen when server unreachable |
+| Backend | Full Next.js app — auth, traces, feed, publications, library |
+| Build | `npm run build:apk` → `public/EVERYA-offline.apk` |
 
-**Phase 4 mobile work:** Point WebView at deployed web app OR sync offline bundle; add Trace navigation patterns. No React Native / Flutter.
+No React Native / Flutter — the APK is a thin shell around the responsive web app.
 
 ---
 
