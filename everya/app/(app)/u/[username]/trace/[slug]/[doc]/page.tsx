@@ -1,6 +1,17 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { documentPageMetadata } from "@/lib/page-metadata";
+import { documentSharePath } from "@/lib/share-url";
+import { HashScroll } from "@/components/navigation/hash-scroll";
 import { getTraceTree, traceHref, assertCanViewTrace } from "@/services/traces";
+import { getDocumentLinks } from "@/services/document-links";
+import { DocumentRelationships } from "@/components/knowledge/document-relationships";
+import { DocumentContributors } from "@/components/knowledge/document-contributors";
+import { getDocumentContributors } from "@/services/collaboration";
+import { DocumentNavFooter } from "@/components/reader/document-nav-footer";
+import { resolveDocNav } from "@/lib/document-nav";
+import { canEditTraceContent, getTraceRole } from "@/lib/permissions/trace";
 import { getDocumentStats, recordDocumentView } from "@/services/documents";
 import { getServerSession } from "@/lib/session";
 import { CommentSection } from "@/components/comments/comment-section";
@@ -14,14 +25,8 @@ import { StickyEngagementBar } from "@/components/reader/sticky-engagement-bar";
 import { KnowledgeNav } from "@/components/navigation/knowledge-nav";
 import { formatUsername } from "@/lib/utils";
 
-export default async function TraceDocumentPage({
-  params,
-}: {
-  params: Promise<{ username: string; slug: string; doc: string }>;
-}) {
-  const { username, slug: traceSlug, doc: docSlug } = await params;
-
-  const document = await prisma.document.findFirst({
+async function loadTraceDocument(username: string, traceSlug: string, docSlug: string) {
+  return prisma.document.findFirst({
     where: {
       slug: docSlug,
       publicationId: null,
@@ -29,6 +34,7 @@ export default async function TraceDocumentPage({
     },
     include: {
       author: { select: { id: true, username: true, name: true, image: true, bio: true } },
+      lastEditedBy: { select: { username: true, name: true } },
       repository: {
         select: {
           id: true,
@@ -42,16 +48,45 @@ export default async function TraceDocumentPage({
       tags: { include: { tag: { select: { name: true, slug: true } } } },
     },
   });
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string; slug: string; doc: string }>;
+}): Promise<Metadata> {
+  const { username, slug, doc } = await params;
+  const document = await loadTraceDocument(username, slug, doc);
+  if (!document) return { title: "Document not found" };
+  const path = documentSharePath({
+    slug: document.slug,
+    publicationId: document.publicationId,
+    repository: document.repository,
+  });
+  return documentPageMetadata(document, path);
+}
+
+export default async function TraceDocumentPage({
+  params,
+}: {
+  params: Promise<{ username: string; slug: string; doc: string }>;
+}) {
+  const { username, slug: traceSlug, doc: docSlug } = await params;
+
+  const document = await loadTraceDocument(username, traceSlug, docSlug);
 
   const session = await getServerSession();
-  if (!document || !assertCanViewTrace(document.repository, session?.user.id)) notFound();
+  if (!document || !(await assertCanViewTrace(document.repository, session?.user.id))) notFound();
 
+  const traceRole = session ? await getTraceRole(document.repositoryId, session.user.id) : null;
+  if (document.status === "DRAFT" && (!traceRole || !canEditTraceContent(traceRole))) notFound();
+  const canEdit = traceRole ? canEditTraceContent(traceRole) : false;
   const isAuthor = session?.user.id === document.authorId;
   await recordDocumentView(document.id, session?.user.id);
 
-  const [stats, tree, comments, userLike, userBookmark, userRating, commentCount, isFollowing] = await Promise.all([
+  const [stats, tree, comments, userLike, userBookmark, userRating, commentCount, isFollowing, docLinks, contributors] = await Promise.all([
     getDocumentStats(document.id),
-    getTraceTree(document.repositoryId),
+    getTraceTree(document.repositoryId, { includeDrafts: canEdit }),
     prisma.comment.findMany({
       where: { documentId: document.id, parentId: null },
       include: {
@@ -70,9 +105,24 @@ export default async function TraceDocumentPage({
     session && session.user.id !== document.authorId
       ? prisma.userFollow.findUnique({ where: { followerId_followingId: { followerId: session.user.id, followingId: document.authorId } } }).then((r) => !!r)
       : Promise.resolve(false),
+    getDocumentLinks(document.id).then((links) =>
+      links.map((l) => ({
+        id: l.id,
+        type: l.type,
+        href: traceHref(document.repository) + `/${l.document.slug}`,
+        document: { title: l.document.title },
+      }))
+    ),
+    getDocumentContributors(document.id),
   ]);
 
   const basePath = traceHref(document.repository);
+  const shareUrl = documentSharePath({
+    slug: document.slug,
+    publicationId: document.publicationId,
+    repository: document.repository,
+  });
+  const docNav = resolveDocNav(docLinks, tree, basePath, docSlug);
   const serializedComments = comments.map((c) => ({
     ...c,
     createdAt: c.createdAt.toISOString(),
@@ -81,6 +131,7 @@ export default async function TraceDocumentPage({
 
   return (
     <>
+      <HashScroll />
       <ReadingProgress />
       <ArticleReader
         content={document.content}
@@ -107,17 +158,32 @@ export default async function TraceDocumentPage({
               ownerUsername: document.repository.owner.username,
             }}
             author={document.author}
+            lastEditor={document.lastEditedBy}
             tags={document.tags.map((t) => t.tag)}
             stats={stats}
             commentCount={commentCount}
             documentId={document.id}
             engagement={{ liked: !!userLike, bookmarked: !!userBookmark, rating: userRating?.value, signedIn: !!session }}
             follow={{ authorFollowing: isFollowing, isAuthor }}
-            editHref={isAuthor ? `${basePath}/${docSlug}/edit` : undefined}
+            editHref={canEdit ? `${basePath}/${docSlug}/edit` : undefined}
+            shareUrl={shareUrl}
           />
           <ReaderBody content={document.content} />
+          <DocumentRelationships links={docLinks} />
+          {contributors && <DocumentContributors contributors={contributors.contributors} />}
+          <DocumentNavFooter
+            previous={docNav.previous}
+            next={docNav.next}
+            traceHref={docNav.traceHref}
+            traceName={document.repository.name}
+          />
           <ReaderAuthorCard author={document.author} signedIn={!!session} isFollowing={isFollowing} isSelf={isAuthor} />
-          <CommentSection documentId={document.id} initialComments={serializedComments} currentUserId={session?.user.id} />
+          <CommentSection
+            documentId={document.id}
+            initialComments={serializedComments}
+            currentUserId={session?.user.id}
+            canModerate={canEdit || isAuthor}
+          />
         </article>
       </ArticleReader>
       <StickyEngagementBar
@@ -128,6 +194,7 @@ export default async function TraceDocumentPage({
         initialRating={userRating?.value}
         likeCount={stats.likeCount}
         signedIn={!!session}
+        shareUrl={shareUrl}
       />
     </>
   );

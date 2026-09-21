@@ -3,17 +3,22 @@ import { canViewRepo } from "@/lib/access";
 import type { TreeNode } from "@/types";
 
 export async function getRepositoryTree(
-  repositoryId: string
+  repositoryId: string,
+  options?: { includeDrafts?: boolean }
 ): Promise<TreeNode[]> {
+  const includeDrafts = options?.includeDrafts ?? false;
   const [folders, documents] = await Promise.all([
     prisma.folder.findMany({
       where: { repositoryId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     prisma.document.findMany({
-      where: { repositoryId },
+      where: {
+        repositoryId,
+        ...(includeDrafts ? {} : { status: { not: "DRAFT" } }),
+      },
       orderBy: { title: "asc" },
-      select: { id: true, title: true, slug: true, folderId: true },
+      select: { id: true, title: true, slug: true, folderId: true, status: true },
     }),
   ]);
 
@@ -34,6 +39,7 @@ export async function getRepositoryTree(
               name: d.title,
               slug: d.slug,
               type: "document" as const,
+              status: d.status,
             })),
         ],
       }));
@@ -47,6 +53,7 @@ export async function getRepositoryTree(
         name: d.title,
         slug: d.slug,
         type: "document" as const,
+        status: d.status,
       }));
 
     return [...childFolders, ...rootDocs];

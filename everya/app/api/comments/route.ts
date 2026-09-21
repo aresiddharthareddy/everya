@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
+import { documentReaderHref } from "@/lib/document-href";
 import { createCommentSchema } from "@/lib/validators";
 import {
   assertDocumentAccessible,
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const link = `/r/${document.repository.owner.username}/${document.repository.slug}/${document.slug}`;
+  const link = `${documentReaderHref(document)}#discussion`;
   if (parentId) {
     const parent = await prisma.comment.findUnique({ where: { id: parentId } });
     if (parent && parent.authorId !== session.user.id) {

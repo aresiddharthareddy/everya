@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { personHref } from "@/lib/share-url";
 import { Users, FileText, BookOpen, Globe, ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
@@ -19,6 +21,32 @@ const tabs = [
 ] as const;
 
 type Tab = (typeof tabs)[number]["id"];
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const username = (await params).username.replace(/^@/, "");
+  const user = await prisma.user.findUnique({
+    where: { username },
+    select: { name: true, username: true, bio: true, image: true },
+  });
+  if (!user) return { title: "Profile not found" };
+  const path = personHref(user.username);
+  const title = user.name || `@${user.username}`;
+  return {
+    title,
+    description: user.bio || undefined,
+    alternates: { canonical: path },
+    openGraph: {
+      title,
+      description: user.bio || undefined,
+      url: path,
+      images: user.image ? [{ url: user.image }] : undefined,
+    },
+  };
+}
 
 export default async function ProfilePage({
   params,

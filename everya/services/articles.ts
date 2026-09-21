@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { calcReadingMinutes, slugify } from "@/lib/utils";
 import { getMemberRole } from "./publications";
 import { canEditArticle, canPublishArticle } from "@/lib/permissions/publication";
+import { snapshotDocumentAfterSave } from "@/services/document-revisions";
 import { trackEvent } from "./analytics";
 
 export async function createArticleDraft(
@@ -36,6 +37,7 @@ export async function createArticleDraft(
       repositoryId: publication.repositoryId,
       publicationId: publication.id,
       authorId: userId,
+      lastEditedById: userId,
       excerpt: content.slice(0, 200).replace(/[#*`\n]/g, " ").trim(),
       readingMinutes: calcReadingMinutes(content),
     },
@@ -61,7 +63,14 @@ export async function updateArticle(
   }
 
   const content = data.content ?? doc.content;
-  return prisma.document.update({
+  const before = {
+    title: doc.title,
+    subtitle: doc.subtitle,
+    content: doc.content,
+    excerpt: doc.excerpt,
+    status: doc.status,
+  };
+  const updated = await prisma.document.update({
     where: { id: documentId },
     data: {
       title: data.title ?? doc.title,
@@ -70,8 +79,17 @@ export async function updateArticle(
       coverImage: data.coverImage !== undefined ? data.coverImage : doc.coverImage,
       excerpt: content.slice(0, 200).replace(/[#*`\n]/g, " ").trim(),
       readingMinutes: calcReadingMinutes(content),
+      lastEditedById: userId,
     },
   });
+  await snapshotDocumentAfterSave(documentId, userId, before, {
+    title: updated.title,
+    subtitle: updated.subtitle,
+    content: updated.content,
+    excerpt: updated.excerpt,
+    status: updated.status,
+  });
+  return updated;
 }
 
 export async function publishArticle(documentId: string, userId: string) {

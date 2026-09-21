@@ -64,14 +64,14 @@ export function ArticleReader({
               onClick={() => setTreeOpen((o) => !o)}
               aria-expanded={treeOpen}
             >
-              Collection
+              Trace
             </Button>
           )}
         </div>
       </div>
 
       {drawer("right", tocOpen, () => setTocOpen(false), "Table of contents", <TableOfContents content={content} />)}
-      {drawer("left", treeOpen && !!tree, () => setTreeOpen(false), "In this collection", tree)}
+      {drawer("left", treeOpen && !!tree, () => setTreeOpen(false), "In this trace", tree)}
 
       <div className={cn("mx-auto px-page py-page read-container", widthClass[contentWidth], focusMode && "max-w-3xl")}>
         {children}

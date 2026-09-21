@@ -45,7 +45,7 @@ export async function assertDocumentAccessible(documentId: string, userId?: stri
     where: { id: documentId },
     include: {
       repository: { select: repositorySelect },
-      publication: { select: { id: true, visibility: true } },
+      publication: { select: { id: true, visibility: true, handle: true } },
     },
   });
   if (!document) return null;

@@ -375,6 +375,18 @@ async function main() {
     data: { publicationId: everyaPub.id, userId: kernel.id },
   });
 
+  await prisma.documentLink.createMany({
+    data: [
+      { fromDocumentId: gettingStarted.id, toDocumentId: apiDesign.id, type: "NEXT" },
+      { fromDocumentId: apiDesign.id, toDocumentId: gettingStarted.id, type: "PREVIOUS" },
+      { fromDocumentId: gettingStarted.id, toDocumentId: k8sRunbook.id, type: "RELATED" },
+    ],
+  });
+
+  await prisma.traceMember.create({
+    data: { repositoryId: platformRepo.id, userId: infraops.id, role: "EDITOR" },
+  });
+
   for (const [followerId, followingId] of [
     [infraops.id, alex.id],
     [kernel.id, alex.id],

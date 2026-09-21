@@ -24,6 +24,7 @@ export function ReaderArticleHeader({
   collection,
   trace,
   author,
+  lastEditor,
   tags,
   stats,
   commentCount,
@@ -31,6 +32,7 @@ export function ReaderArticleHeader({
   engagement,
   follow,
   editHref,
+  shareUrl,
 }: {
   title: string;
   subtitle?: string | null;
@@ -42,6 +44,7 @@ export function ReaderArticleHeader({
   collection?: { name: string; slug: string; ownerUsername: string } | null;
   trace?: { name: string; slug: string; ownerUsername: string } | null;
   author: { username: string; name: string | null; image: string | null };
+  lastEditor?: { username: string; name: string | null } | null;
   tags?: { name: string; slug: string }[];
   stats: { readerCount: number; likeCount: number; avgRating: number; readingMinutes: number };
   commentCount: number;
@@ -59,6 +62,7 @@ export function ReaderArticleHeader({
     publicationFollowing?: boolean;
   };
   editHref?: string;
+  shareUrl?: string;
 }) {
   return (
     <header data-doc-header className="mb-10">
@@ -91,6 +95,14 @@ export function ReaderArticleHeader({
             href={`/u/${author.username}`}
             meta={formatDistanceToNow(updatedAt, { addSuffix: true })}
           />
+          {lastEditor && lastEditor.username !== author.username && (
+            <p className="typo-meta">
+              Last edited by{" "}
+              <Link href={`/u/${lastEditor.username}`} className="hover:text-foreground motion-fast">
+                {lastEditor.name || `@${lastEditor.username}`}
+              </Link>
+            </p>
+          )}
           <ContentMeta items={[`${readingMinutes} min read`]} />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -130,7 +142,7 @@ export function ReaderArticleHeader({
           likeCount={stats.likeCount}
           signedIn={engagement.signedIn}
         />
-        <ShareButton />
+        <ShareButton url={shareUrl} title={title} />
         {editHref && (
           <Link href={editHref}>
             <Button variant="outline" size="sm">

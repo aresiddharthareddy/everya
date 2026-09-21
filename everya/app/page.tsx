@@ -3,6 +3,7 @@ import { ArrowRight, Eye, Heart, FileText } from "lucide-react";
 import { LandingHero } from "@/components/landing/hero";
 import { prisma } from "@/lib/prisma";
 import { formatUsername, formatCount, formatRating } from "@/lib/utils";
+import { documentReaderHref, repositoryHref } from "@/lib/share-url";
 import { Avatar } from "@/components/ui/avatar";
 
 export default async function LandingPage() {
@@ -10,13 +11,18 @@ export default async function LandingPage() {
     prisma.repository.findMany({
       where: { visibility: "PUBLIC" },
       take: 3,
-      include: { owner: { select: { username: true, name: true } }, _count: { select: { documents: true } } },
+      include: {
+        owner: { select: { username: true, name: true } },
+        publication: { select: { handle: true } },
+        _count: { select: { documents: true } },
+      },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.document.findMany({
       where: { repository: { visibility: "PUBLIC" } },
       take: 6,
       include: {
+        publication: { select: { handle: true } },
         repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
         author: { select: { username: true, name: true, image: true } },
         ratings: { select: { value: true } },
@@ -95,7 +101,12 @@ export default async function LandingPage() {
                 return (
                   <Link
                     key={doc.id}
-                    href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`}
+                    href={documentReaderHref({
+                      slug: doc.slug,
+                      publicationId: doc.publicationId,
+                      publication: doc.publication,
+                      repository: doc.repository,
+                    })}
                     className="stat-card p-6 group hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center gap-3 mb-4">
@@ -129,7 +140,7 @@ export default async function LandingPage() {
               {repos.map((repo) => (
                 <Link
                   key={repo.id}
-                  href={`/r/${repo.owner.username}/${repo.slug}`}
+                  href={repositoryHref(repo)}
                   className="stat-card p-6 hover:shadow-md transition-shadow"
                 >
                   <h3 className="font-medium">{repo.name}</h3>

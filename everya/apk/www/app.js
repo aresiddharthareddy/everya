@@ -3,6 +3,7 @@ const store = {
   likes: JSON.parse(localStorage.getItem("likes") || "{}"),
   saves: JSON.parse(localStorage.getItem("saves") || "{}"),
   comments: JSON.parse(localStorage.getItem("comments") || "{}"),
+  reported: JSON.parse(localStorage.getItem("reported") || "{}"),
   traceFollows: JSON.parse(localStorage.getItem("traceFollows") || "{}"),
   drafts: JSON.parse(localStorage.getItem("drafts") || "[]"),
   notifRead: JSON.parse(localStorage.getItem("notifRead") || "{}"),
@@ -12,6 +13,7 @@ const persist = () => {
   localStorage.setItem("likes", JSON.stringify(store.likes));
   localStorage.setItem("saves", JSON.stringify(store.saves));
   localStorage.setItem("comments", JSON.stringify(store.comments));
+  localStorage.setItem("reported", JSON.stringify(store.reported));
   localStorage.setItem("traceFollows", JSON.stringify(store.traceFollows));
   localStorage.setItem("drafts", JSON.stringify(store.drafts));
   localStorage.setItem("notifRead", JSON.stringify(store.notifRead));
@@ -21,7 +23,9 @@ const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(
 const user = (u) => DATA.users.find((x) => x.username === u) || { username: u, name: u, bio: "" };
 const trace = (u, s) => DATA.traces.find((t) => t.username === u && t.slug === s);
 const doc = (u, s, d) => trace(u, s)?.docs.find((x) => x.slug === d);
+const draftDoc = (u, s, d) => trace(u, s)?.draftDocs?.find((x) => x.slug === d);
 const pub = (h) => DATA.publications.find((p) => p.handle === h);
+const canEditTrace = (u) => store.user === u || store.user === "alex" || store.user === "infraops";
 
 function md(src) {
   return esc(src)
@@ -37,7 +41,7 @@ function md(src) {
 }
 
 function badge(t) {
-  const m = { document: "Doc", publication: "Pub", trace: "Trace" };
+  const m = { document: "Doc", publication: "Pub", trace: "Trace", draft: "Draft" };
   return `<span class="badge">${m[t] || t}</span>`;
 }
 
@@ -53,15 +57,59 @@ function feedCard(item) {
   </a>`;
 }
 
+function contributorsHtml(contributors) {
+  if (!contributors?.length) return "";
+  return `<h2 class="section">Contributors</h2>
+    <div class="contributors">${contributors.map((c) => `
+      <a class="chip" href="#/profile/${c.username}">@${esc(c.username)} <small>${esc(c.role)}</small></a>`).join("")}</div>`;
+}
+
+function docNavFooter(u, s, item) {
+  const t = trace(u, s);
+  if (!item.prev && !item.next) return "";
+  const prev = item.prev ? t.docs.find((d) => d.slug === item.prev) : null;
+  const next = item.next ? t.docs.find((d) => d.slug === item.next) : null;
+  return `<nav class="doc-nav">
+    ${prev ? `<a class="nav-link" href="#/u/${u}/trace/${s}/${prev.slug}">← ${esc(prev.title)}</a>` : "<span></span>"}
+    <a class="nav-link center" href="#/u/${u}/trace/${s}">${esc(t.name)}</a>
+    ${next ? `<a class="nav-link right" href="#/u/${u}/trace/${s}/${next.slug}">${esc(next.title)} →</a>` : "<span></span>"}
+  </nav>`;
+}
+
 function viewFeed() {
-  const items = DATA.feed.concat(store.drafts.map((d) => ({
-    id: d.id, type: "document", title: d.title, excerpt: d.excerpt, author: store.user,
-    trace: "Drafts", traceSlug: "_", docSlug: d.id, minutes: d.minutes,
-  })));
-  return `<div class="banner">Offline preview — dummy seed data, saved locally on this device.</div>
+  const localDrafts = store.drafts.map((d) => ({
+    id: d.id, type: "draft", title: d.title, excerpt: d.excerpt, author: store.user,
+    trace: "My drafts", traceSlug: "_", docSlug: d.id, minutes: d.minutes,
+  }));
+  const items = DATA.feed.concat(localDrafts);
+  return `<div class="banner">Offline preview v${DATA.version} — demo data saved locally on this device.</div>
     <h1 class="page-title">Home</h1>
     <p class="lede">Stories and trace documents from the EVERYA demo catalog.</p>
-    ${items.map(feedCard).join("")}`;
+    ${items.map(feedCard).join("")}
+    ${store.drafts.length ? `<a class="btn" href="#/drafts">View ${store.drafts.length} local draft(s)</a>` : ""}`;
+}
+
+function viewDrafts() {
+  const seed = DATA.traces.flatMap((t) =>
+    (canEditTrace(t.username) ? (t.draftDocs || []) : []).map((d) => ({
+      title: d.title, excerpt: d.excerpt, href: `#/u/${t.username}/trace/${t.slug}/${d.slug}`,
+      source: t.name,
+    }))
+  );
+  const local = store.drafts.map((d) => ({
+    title: d.title, excerpt: d.excerpt, href: `#/drafts/${d.id}`, source: "Local draft",
+  }));
+  const all = [...seed, ...local];
+  return `<h1 class="page-title">Drafts</h1>
+    <p class="lede">Unpublished documents you can continue editing.</p>
+    ${all.length ? all.map((d) => `
+      <a class="card" href="${d.href}">
+        ${badge("draft")}
+        <div class="meta">${esc(d.source)}</div>
+        <div class="title">${esc(d.title)}</div>
+        <p class="excerpt">${esc(d.excerpt)}</p>
+      </a>`).join("") : `<p class="lede">No drafts. Create one from the Create tab.</p>`}
+    <a class="btn" href="#/create">New draft</a>`;
 }
 
 function viewExplore() {
@@ -96,36 +144,71 @@ function viewTrace(u, s) {
       <span>${esc(d.title)}</span>
       <small>${d.minutes} min</small>
     </a>`).join("");
+  const drafts = canEditTrace(u) ? (t.draftDocs || []) : [];
+  const draftList = drafts.map((d) => `
+    <a class="tree-item draft" href="#/u/${u}/trace/${s}/${d.slug}">
+      <span>${esc(d.title)}</span>
+      <small>Draft</small>
+    </a>`).join("");
   return `<div class="meta">@${esc(u)}</div>
     <h1 class="page-title">${esc(t.name)}</h1>
     <p class="lede">${esc(t.description)}</p>
     <div class="row">
       <button class="btn solid" onclick="toggleTraceFollow('${u}','${s}')">${following ? "Following" : "Follow trace"}</button>
+      <button class="btn" onclick="shareLink('#/u/${u}/trace/${s}')">Share</button>
       <a class="btn" href="#/profile/${u}">Profile</a>
     </div>
+    ${contributorsHtml(t.contributors)}
+    ${draftList ? `<h2 class="section">Drafts</h2><div class="tree">${draftList}</div>` : ""}
     <h2 class="section">Documents</h2>
     <div class="tree">${tree}</div>`;
 }
 
-function viewDoc(u, s, d) {
-  const item = doc(u, s, d);
+function commentBlock(id, comments) {
+  const list = (comments || []).map((c, i) => {
+    const reported = store.reported[`${id}:${i}`];
+    return `<div class="comment" id="c-${id}-${i}">
+      <div class="row between">
+        <strong>${esc(c.author || "You")}</strong>
+        <div class="row">
+          ${!reported ? `<button class="link-btn" onclick="reportComment('${id}',${i})">Report</button>` : `<span class="meta">Reported</span>`}
+          ${c.author === store.user || c.author === "You" ? `<button class="link-btn danger" onclick="deleteComment('${id}',${i})">Delete</button>` : ""}
+        </div>
+      </div>
+      <p>${esc(c.text)}</p>
+    </div>`;
+  }).join("");
+  return `${list || `<p class="lede">No comments yet.</p>`}`;
+}
+
+function viewDoc(u, s, d, isDraft) {
+  const item = isDraft ? draftDoc(u, s, d) : doc(u, s, d);
   if (!item) return `<p>Document not found.</p>`;
+  if (isDraft && !canEditTrace(u)) return `<p>This draft is not available.</p>`;
   const id = `${u}/${s}/${d}`;
   const liked = !!store.likes[id];
   const saved = !!store.saves[id];
   const comments = store.comments[id] || [];
-  return `<div class="meta">@${esc(u)} · ${esc(trace(u,s).name)} · ${item.minutes} min</div>
+  const editor = item.lastEditor && item.lastEditor !== item.author ? item.lastEditor : null;
+  return `<div id="read-progress" class="read-progress"></div>
+    <div class="meta">@${esc(u)} · ${esc(trace(u,s).name)} · ${item.minutes} min${isDraft ? " · Draft" : ""}</div>
     <h1 class="page-title">${esc(item.title)}</h1>
+    ${editor ? `<p class="lede">Written by @${esc(item.author)} · Last edited by @${esc(editor)}</p>` : `<p class="lede">By @${esc(item.author || u)}</p>`}
     <div class="row">
       <button class="chip ${liked?"on":""}" onclick="toggleLike('${id}')">${liked?"Liked":"Like"}</button>
       <button class="chip ${saved?"on":""}" onclick="toggleSave('${id}')">${saved?"Saved":"Save"}</button>
-      <a class="chip" href="#/u/${u}/trace/${s}">Go to trace</a>
+      <button class="chip" onclick="shareLink('#/u/${u}/trace/${s}/${d}')">Share</button>
+      <a class="chip" href="#/u/${u}/trace/${s}">Trace</a>
+      ${isDraft ? `<a class="chip" href="#/create">Edit draft</a>` : ""}
     </div>
-    <article class="body">${md(item.content)}</article>
-    <h2 class="section">Discussion</h2>
-    <textarea id="c" placeholder="Write a comment…"></textarea>
-    <button class="btn solid" onclick="addComment('${id}')">Post</button>
-    ${comments.map((c) => `<div class="comment"><strong>You</strong><p>${esc(c)}</p></div>`).join("") || `<p class="lede">No comments yet.</p>`}`;
+    <article class="body" id="article-body">${md(item.content)}</article>
+    ${!isDraft ? docNavFooter(u, s, item) : ""}
+    <section id="discussion">
+      <h2 class="section">Discussion</h2>
+      <textarea id="c" placeholder="Write a comment…"></textarea>
+      <button class="btn solid" onclick="addComment('${id}')">Post</button>
+      ${commentBlock(id, comments)}
+    </section>`;
 }
 
 function viewPub(h) {
@@ -140,6 +223,7 @@ function viewPub(h) {
   return `<div class="meta">Publication</div>
     <h1 class="page-title">${esc(p.name)}</h1>
     <p class="lede">${esc(p.description)}</p>
+    <button class="btn" onclick="shareLink('#/p/${h}')">Share</button>
     <h2 class="section">Articles</h2>${articles}`;
 }
 
@@ -149,6 +233,7 @@ function viewPubArticle(h, s) {
   if (!a) return `<p>Article not found.</p>`;
   return `<div class="meta">@${esc(a.author)} · ${esc(p.name)}</div>
     <h1 class="page-title">${esc(a.title)}</h1>
+    <div class="row"><button class="chip" onclick="shareLink('#/p/${h}/${s}')">Share</button></div>
     <article class="body">${md(a.content)}</article>
     <a class="btn" href="#/p/${h}">Back to publication</a>`;
 }
@@ -163,18 +248,20 @@ function viewLibrary() {
   }).filter(Boolean).join("");
   return `<h1 class="page-title">Library</h1>
     <p class="lede">Saved documents on this device.</p>
-    ${cards || `<p class="lede">Nothing saved yet. Tap Save on any document.</p>`}`;
+    ${cards || `<p class="lede">Nothing saved yet. Tap Save on any document.</p>`}
+    <a class="btn" href="#/drafts">My drafts</a>`;
 }
 
 function viewNotifications() {
   return `<h1 class="page-title">Notifications</h1>
     ${DATA.notifications.map((n) => {
       const read = store.notifRead[n.id] || n.read;
-      return `<div class="card flat ${read?"read":""}" onclick="markRead('${n.id}')">
+      const href = n.href || "#/";
+      return `<a class="card flat ${read?"read":""}" href="${href}" onclick="markRead('${n.id}')">
         <div class="meta">${esc(n.type)} · @${esc(n.actor)}</div>
         <div class="title">${esc(n.title)}</div>
         <p class="excerpt">${esc(n.message)}</p>
-      </div>`;
+      </a>`;
     }).join("")}`;
 }
 
@@ -188,6 +275,7 @@ function viewProfile(u) {
   return `<h1 class="page-title">${esc(p.name)}</h1>
     <div class="meta">@${esc(u)}</div>
     <p class="lede">${esc(p.bio)}</p>
+    <button class="btn" onclick="shareLink('#/profile/${u}')">Share profile</button>
     <div class="stats"><span>${p.followers} followers</span><span>${p.following} following</span></div>
     <h2 class="section">Traces</h2>${traces || `<p class="lede">No traces.</p>`}
     ${u !== store.user ? `<button class="btn solid" onclick="switchUser('${u}')">View as @${esc(u)}</button>` : ""}`;
@@ -195,10 +283,13 @@ function viewProfile(u) {
 
 function viewCreate() {
   return `<h1 class="page-title">Create</h1>
-    <p class="lede">Drafts are saved locally on this device.</p>
+    <p class="lede">Drafts are saved locally. Publish is available in the hosted app.</p>
     <input id="wt" class="input" placeholder="Title" />
     <textarea id="wb" class="input tall" placeholder="Write in Markdown…"></textarea>
-    <button class="btn solid" onclick="saveDraft()">Save draft</button>`;
+    <div class="row">
+      <button class="btn solid" onclick="saveDraft()">Save draft</button>
+      <button class="btn" onclick="alert('Publishing requires the hosted EveryA app.')">Publish</button>
+    </div>`;
 }
 
 function viewLogin() {
@@ -209,6 +300,23 @@ function viewLogin() {
     <div class="stack">${users}</div>`;
 }
 
+function viewLocalDraft(id) {
+  const d = store.drafts.find((x) => x.id === id);
+  if (!d) return `<p>Draft not found.</p>`;
+  return `<div class="meta">Local draft</div>
+    <h1 class="page-title">${esc(d.title)}</h1>
+    <article class="body">${md(d.content)}</article>
+    <a class="btn" href="#/create">Continue editing</a>`;
+}
+
+window.shareLink = (hashPath) => {
+  const url = location.href.split("#")[0] + hashPath;
+  if (navigator.share) {
+    navigator.share({ title: "EVERYA", url }).catch(() => {});
+    return;
+  }
+  navigator.clipboard?.writeText(url).then(() => alert("Link copied"));
+};
 window.toggleLike = (id) => { store.likes[id] = !store.likes[id]; persist(); route(); };
 window.toggleSave = (id) => { store.saves[id] = !store.saves[id]; persist(); route(); };
 window.toggleTraceFollow = (u, s) => { const k = `${u}/${s}`; store.traceFollows[k] = !store.traceFollows[k]; persist(); route(); };
@@ -216,39 +324,80 @@ window.addComment = (id) => {
   const el = document.getElementById("c");
   if (!el?.value.trim()) return;
   store.comments[id] = store.comments[id] || [];
-  store.comments[id].push(el.value.trim());
+  store.comments[id].push({ text: el.value.trim(), author: store.user });
+  persist(); route();
+};
+window.deleteComment = (id, i) => {
+  if (!confirm("Delete this comment?")) return;
+  store.comments[id]?.splice(i, 1);
+  persist(); route();
+};
+window.reportComment = (id, i) => {
+  const reason = prompt("Why are you reporting this comment?");
+  if (!reason?.trim()) return;
+  store.reported[`${id}:${i}`] = true;
   persist(); route();
 };
 window.saveDraft = () => {
   const title = document.getElementById("wt")?.value.trim();
   const content = document.getElementById("wb")?.value.trim();
   if (!title || !content) return alert("Add a title and body.");
+  if (!confirm("Save as draft?")) return;
   store.drafts.unshift({
     id: "d" + Date.now(), title, content, excerpt: content.slice(0, 140),
     author: store.user, minutes: Math.max(1, Math.ceil(content.split(/\s+/).length / 200)),
   });
   persist();
-  location.hash = "#/library";
+  location.hash = "#/drafts";
 };
 window.switchUser = (u) => { store.user = u; persist(); location.hash = "#/profile/" + u; };
-window.markRead = (id) => { store.notifRead[id] = true; persist(); route(); };
+window.markRead = (id) => { store.notifRead[id] = true; persist(); };
 
 function navTab(path, label, icon) {
-  const active = (location.hash.slice(1) || "/").startsWith(path.replace("#", ""));
+  const active = (location.hash.slice(1).split("~")[0] || "/").startsWith(path.replace("#", ""));
   return `<a class="tab ${active?"on":""}" href="${path}"><span>${icon}</span>${label}</a>`;
 }
 
+function bindReadingProgress() {
+  const bar = document.getElementById("read-progress");
+  const body = document.getElementById("article-body");
+  if (!bar || !body) return;
+  const main = document.querySelector("main");
+  const onScroll = () => {
+    const rect = body.getBoundingClientRect();
+    const total = body.offsetHeight - window.innerHeight * 0.4;
+    const scrolled = Math.max(0, -rect.top);
+    const pct = total > 0 ? Math.min(100, (scrolled / total) * 100) : 0;
+    bar.style.width = pct + "%";
+  };
+  main?.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+}
+
+function scrollToAnchor(anchor) {
+  if (!anchor) return;
+  const el = document.getElementById(anchor);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function route() {
-  const h = location.hash.slice(1) || "/";
-  const parts = h.split("/").filter(Boolean);
+  const raw = location.hash.slice(1) || "/";
+  const [path, anchor] = raw.split("~");
+  const parts = path.split("/").filter(Boolean);
   let html = "";
   if (parts[0] === "explore") html = viewExplore();
   else if (parts[0] === "library") html = viewLibrary();
+  else if (parts[0] === "drafts" && parts[1]) html = viewLocalDraft(parts[1]);
+  else if (parts[0] === "drafts") html = viewDrafts();
   else if (parts[0] === "create") html = viewCreate();
   else if (parts[0] === "notifications") html = viewNotifications();
   else if (parts[0] === "login") html = viewLogin();
   else if (parts[0] === "profile" && parts[1]) html = viewProfile(parts[1]);
-  else if (parts[0] === "u" && parts[2] === "trace" && parts[3] && parts[4]) html = viewDoc(parts[1], parts[3], parts[4]);
+  else if (parts[0] === "u" && parts[2] === "trace" && parts[3] && parts[4]) {
+    const isDraft = !!draftDoc(parts[1], parts[3], parts[4]) && !doc(parts[1], parts[3], parts[4]);
+    html = viewDoc(parts[1], parts[3], parts[4], isDraft);
+  }
   else if (parts[0] === "u" && parts[2] === "trace" && parts[3]) html = viewTrace(parts[1], parts[3]);
   else if (parts[0] === "p" && parts[1] && parts[2]) html = viewPubArticle(parts[1], parts[2]);
   else if (parts[0] === "p" && parts[1]) html = viewPub(parts[1]);
@@ -259,13 +408,15 @@ function route() {
     navTab("#/", "Home", "⌂"),
     navTab("#/explore", "Explore", "◎"),
     navTab("#/create", "Create", "✎"),
-    navTab("#/library", "Library", "▤"),
+    navTab("#/drafts", "Drafts", "▤"),
     navTab("#/profile/" + store.user, "You", "◉"),
   ].join("");
   const unread = DATA.notifications.filter((n) => !(store.notifRead[n.id] || n.read)).length;
   document.getElementById("notif-badge").textContent = unread ? String(unread) : "";
   document.getElementById("notif-badge").style.display = unread ? "inline-flex" : "none";
-  window.scrollTo(0, 0);
+  bindReadingProgress();
+  if (anchor) setTimeout(() => scrollToAnchor(anchor), 50);
+  else window.scrollTo(0, 0);
 }
 
 addEventListener("hashchange", route);

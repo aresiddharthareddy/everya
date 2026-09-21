@@ -4,3 +4,4 @@ export * from "./comments";
 export * from "./profile";
 export * from "./publications";
 export * from "./articles";
+export * from "./traces";

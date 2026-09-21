@@ -1,17 +1,52 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, Plus, Upload } from "lucide-react";
-import { getTraceByPath, getTraceTree, traceHref, assertCanViewTrace } from "@/services/traces";
+import { tracePageHref } from "@/lib/share-url";
+import { Download, FileText, Plus, Upload } from "lucide-react";
+import {
+  getTraceByPath,
+  getTraceTree,
+  getTraceMembers,
+  traceHref,
+  assertCanViewTrace,
+} from "@/services/traces";
+import { getTraceDrafts } from "@/services/drafts";
+import { DraftList } from "@/components/writing/draft-list";
 import { KnowledgeTree } from "@/components/knowledge/knowledge-tree";
 import { KnowledgeNav } from "@/components/navigation/knowledge-nav";
 import { PageHeader } from "@/components/navigation/page-header";
 import { AuthorIdentity } from "@/components/content/author-identity";
 import { TraceFollowButton } from "@/components/social/trace-follow-button";
+import { TraceMembersPanel } from "@/components/knowledge/trace-members-panel";
+import { TraceContributorsStrip } from "@/components/knowledge/trace-contributors-strip";
+import { getTraceContributorRoster } from "@/services/collaboration";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCount, formatUsername } from "@/lib/utils";
 import { getServerSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import {
+  canEditTraceContent,
+  canManageTraceMembers,
+  getTraceRole,
+} from "@/lib/permissions/trace";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string; slug: string }>;
+}): Promise<Metadata> {
+  const { username, slug } = await params;
+  const trace = await getTraceByPath(username, slug);
+  if (!trace) return { title: "Trace not found" };
+  const path = tracePageHref(trace.owner.username, trace.slug);
+  return {
+    title: trace.name,
+    description: trace.description || undefined,
+    alternates: { canonical: path },
+    openGraph: { title: trace.name, description: trace.description || undefined, url: path },
+  };
+}
 
 export default async function TracePage({
   params,
@@ -21,11 +56,15 @@ export default async function TracePage({
   const { username, slug } = await params;
   const session = await getServerSession();
   const trace = await getTraceByPath(username, slug);
-  if (!trace || !assertCanViewTrace(trace, session?.user.id)) notFound();
+  if (!trace || !(await assertCanViewTrace(trace, session?.user.id))) notFound();
 
+  const traceRole = session ? await getTraceRole(trace.id, session.user.id) : null;
+  const canEdit = traceRole ? canEditTraceContent(traceRole) : false;
+  const canManage = traceRole ? canManageTraceMembers(traceRole) : false;
   const isOwner = session?.user.id === trace.ownerId;
-  const [tree, isFollowing] = await Promise.all([
-    getTraceTree(trace.id),
+
+  const [tree, isFollowing, members, drafts, roster] = await Promise.all([
+    getTraceTree(trace.id, { includeDrafts: canEdit }),
     session && !isOwner
       ? prisma.traceFollow
           .findUnique({
@@ -33,8 +72,12 @@ export default async function TracePage({
           })
           .then((r) => !!r)
       : Promise.resolve(false),
+    canManage ? getTraceMembers(trace.id) : Promise.resolve([]),
+    canEdit && session ? getTraceDrafts(trace.id, session.user.id) : Promise.resolve([]),
+    getTraceContributorRoster(trace.id),
   ]);
   const basePath = traceHref(trace);
+  const exportUrl = `/api/traces/${trace.owner.username}/${trace.slug}/export`;
 
   return (
     <div className="flex h-full">
@@ -65,8 +108,13 @@ export default async function TracePage({
                 signedIn={!!session}
                 isOwner={isOwner}
               />
-              {isOwner && (
+              {canEdit && (
                 <>
+                  <a href={exportUrl} download>
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4" /> Export
+                    </Button>
+                  </a>
                   <Link href="/create/import-trace">
                     <Button variant="outline" size="sm">
                       <Upload className="h-4 w-4" /> Import
@@ -95,19 +143,38 @@ export default async function TracePage({
           <Badge variant="outline">{trace.visibility}</Badge>
           <span className="typo-meta">
             {trace._count?.documents ?? 0} documents · {formatCount(trace._count?.followers ?? 0)} followers
+            {trace._count?.members ? ` · ${trace._count.members} contributors` : ""}
           </span>
         </div>
+
+        {roster && <TraceContributorsStrip owner={roster.owner} members={roster.members} />}
+
+        {canManage && (
+          <TraceMembersPanel
+            username={trace.owner.username}
+            slug={trace.slug}
+            members={members}
+            ownerUsername={trace.owner.username}
+          />
+        )}
 
         <div className="mt-8 md:hidden">
           <KnowledgeTree tree={tree} basePath={basePath} />
         </div>
+
+        {canEdit && drafts.length > 0 && (
+          <section className="mt-10">
+            <h2 className="typo-caption mb-4">Drafts</h2>
+            <DraftList drafts={drafts} />
+          </section>
+        )}
 
         <section className="mt-10">
           <h2 className="typo-caption mb-4">All documents</h2>
           {tree.length === 0 ? (
             <p className="typo-body-sm text-muted-foreground py-8">No documents yet.</p>
           ) : (
-            <DocumentLinks tree={tree} basePath={basePath} />
+            <DocumentList tree={tree} basePath={basePath} />
           )}
         </section>
       </div>
@@ -115,7 +182,7 @@ export default async function TracePage({
   );
 }
 
-function DocumentLinks({
+function DocumentList({
   tree,
   basePath,
 }: {

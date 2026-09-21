@@ -7,6 +7,9 @@ import { getServerSession } from "@/lib/session";
 import { canViewArticle } from "@/lib/permissions/document";
 import { canPublishArticle } from "@/lib/permissions/publication";
 import { CommentSection } from "@/components/comments/comment-section";
+import { HashScroll } from "@/components/navigation/hash-scroll";
+import { documentPageMetadata } from "@/lib/page-metadata";
+import { documentSharePath } from "@/lib/share-url";
 import { ReadingProgress } from "@/components/docs/reading-progress";
 import { ArticleReader } from "@/components/reader/article-reader";
 import { ReaderBody } from "@/components/reader/reader-body";
@@ -36,12 +39,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle, slug } = await params;
   const document = await loadArticle(handle, slug);
   if (!document) return { title: "Article not found" };
-  const description = document.excerpt || document.subtitle || undefined;
-  return {
-    title: document.title,
-    description,
-    openGraph: { title: document.title, description, type: "article", images: document.coverImage ? [{ url: document.coverImage }] : undefined },
-  };
+  const path = documentSharePath({
+    slug: document.slug,
+    publicationId: document.publicationId,
+    publication: document.publication,
+    repository: document.repository,
+  });
+  return documentPageMetadata(document, path);
 }
 
 export default async function PublicationArticlePage({ params }: Props) {
@@ -92,9 +96,16 @@ export default async function PublicationArticlePage({ params }: Props) {
     replies: c.replies.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), replies: [] })),
   }));
   const pub = document.publication;
+  const shareUrl = documentSharePath({
+    slug: document.slug,
+    publicationId: document.publicationId,
+    publication: document.publication,
+    repository: document.repository,
+  });
 
   return (
     <>
+      <HashScroll />
       <ReadingProgress />
       <ArticleReader content={document.content}>
         <article data-article>
@@ -114,6 +125,7 @@ export default async function PublicationArticlePage({ params }: Props) {
             engagement={{ liked: !!userLike, bookmarked: !!userBookmark, rating: userRating?.value, signedIn: !!session }}
             follow={{ authorFollowing: isFollowingAuthor, isAuthor, publicationHandle: handle, publicationFollowing: isFollowingPub }}
             editHref={canEdit ? `/p/${handle}/write?id=${document.id}` : undefined}
+            shareUrl={shareUrl}
           />
           <ReaderBody content={document.content} />
           <ReaderAuthorCard
@@ -124,7 +136,12 @@ export default async function PublicationArticlePage({ params }: Props) {
             publicationHandle={handle}
             publicationFollowing={isFollowingPub}
           />
-          <CommentSection documentId={document.id} initialComments={serializedComments} currentUserId={session?.user.id} />
+          <CommentSection
+            documentId={document.id}
+            initialComments={serializedComments}
+            currentUserId={session?.user.id}
+            canModerate={canEdit || isAuthor}
+          />
         </article>
       </ArticleReader>
       <StickyEngagementBar
@@ -135,6 +152,7 @@ export default async function PublicationArticlePage({ params }: Props) {
         initialRating={userRating?.value}
         likeCount={stats.likeCount}
         signedIn={!!session}
+        shareUrl={shareUrl}
       />
     </>
   );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canEditTraceContent, getTraceRole } from "@/lib/permissions/trace";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -14,11 +15,18 @@ export async function GET(req: NextRequest) {
   const document = await prisma.document.findFirst({
     where: {
       slug: doc || "",
-      authorId: session.user.id,
-      repository: { slug: repo || "", owner: { username: username || "" } },
+      publicationId: null,
+      repository: { slug: repo || "", owner: { username: username || "" }, publication: null },
     },
+    select: { id: true, title: true, content: true, subtitle: true, slug: true, status: true, repositoryId: true },
   });
 
   if (!document) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const role = await getTraceRole(document.repositoryId, session.user.id);
+  if (!role || !canEditTraceContent(role)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   return NextResponse.json({ document });
 }

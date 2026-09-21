@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback } from "react";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
@@ -11,9 +12,12 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void;
   onSave?: (value: string) => void;
   className?: string;
+  minHeight?: number;
 }
 
-export function MarkdownEditor({ value, onChange, onSave, className }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onChange, onSave, className, minHeight = 420 }: MarkdownEditorProps) {
+  const { resolvedTheme } = useTheme();
+
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {
       e.preventDefault();
@@ -35,12 +39,12 @@ export function MarkdownEditor({ value, onChange, onSave, className }: MarkdownE
       className={cn("rounded-lg border border-border overflow-hidden", className)}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
-      data-color-mode=""
+      data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}
     >
       <MDEditor
         value={value}
         onChange={(v) => onChange(v || "")}
-        height={480}
+        height={minHeight}
         preview="live"
         visibleDragbar={false}
         extraCommands={[]}
@@ -50,7 +54,7 @@ export function MarkdownEditor({ value, onChange, onSave, className }: MarkdownE
           <button
             type="button"
             onClick={() => onSave(value)}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground min-h-[44px] px-2"
           >
             Save now
           </button>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, FileText, Folder } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { TreeNode } from "@/types";
 
@@ -33,7 +34,8 @@ function TreeItem({
   depth?: number;
 }) {
   const isFolder = node.type === "folder";
-  const href = isFolder ? undefined : `${basePath}/${node.slug}`;
+  const isDraft = !isFolder && node.status === "DRAFT";
+  const href = isFolder ? undefined : isDraft ? `${basePath}/${node.slug}/edit` : `${basePath}/${node.slug}`;
   const isActive = !isFolder && node.slug === activeSlug;
   const isOpen = isFolder && openIds.has(node.id);
   const pad = depth * 12 + 8;
@@ -84,6 +86,11 @@ function TreeItem({
     >
       <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       <span className="truncate">{node.name}</span>
+      {isDraft && (
+        <Badge variant="outline" className="ml-auto shrink-0 text-[10px] px-1.5 py-0">
+          Draft
+        </Badge>
+      )}
     </Link>
   );
 }

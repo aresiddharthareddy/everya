@@ -4,6 +4,9 @@ import { Plus, FileText, FolderGit2, ArrowRight, BarChart3 } from "lucide-react"
 import { getServerSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getWriterStats } from "@/services/stats";
+import { listEditableDrafts } from "@/services/drafts";
+import { documentReaderHref, tracePageHref } from "@/lib/share-url";
+import { DraftList } from "@/components/writing/draft-list";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/navigation/page-header";
@@ -14,28 +17,38 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   const user = session.user as { id: string; username?: string };
-  const [repos, recentDocs, bookmarks, writerStats] = await Promise.all([
+  const [repos, recentDocs, bookmarks, writerStats, drafts] = await Promise.all([
     prisma.repository.findMany({
       where: { ownerId: user.id },
-      include: { _count: { select: { documents: true } } },
+      include: {
+        publication: { select: { handle: true } },
+        _count: { select: { documents: true } },
+      },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.document.findMany({
       where: { authorId: user.id },
       take: 5,
       orderBy: { updatedAt: "desc" },
-      include: { repository: { select: { slug: true, name: true, owner: { select: { username: true } } } } },
+      include: {
+        publication: { select: { handle: true } },
+        repository: { select: { slug: true, name: true, owner: { select: { username: true } } } },
+      },
     }),
     prisma.bookmark.findMany({
       where: { userId: user.id },
       take: 5,
       include: {
         document: {
-          include: { repository: { select: { slug: true, owner: { select: { username: true } } } } },
+          include: {
+            publication: { select: { handle: true } },
+            repository: { select: { slug: true, owner: { select: { username: true } } } },
+          },
         },
       },
     }),
     getWriterStats(user.id),
+    listEditableDrafts(user.id, 5),
   ]);
 
   return (
@@ -84,7 +97,15 @@ export default async function DashboardPage() {
           ) : (
             <div className="grid sm:grid-cols-2 gap-3">
               {repos.map((repo) => (
-                <Link key={repo.id} href={`/r/${user.username}/${repo.slug}`} className="stat-card p-5 hover:shadow-md transition-shadow">
+                <Link
+                  key={repo.id}
+                  href={
+                    repo.publication
+                      ? `/p/${repo.publication.handle}`
+                      : tracePageHref(user.username!, repo.slug)
+                  }
+                  className="stat-card p-5 hover:shadow-md transition-shadow"
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-medium flex items-center gap-2">
                       <FolderGit2 className="h-4 w-4 text-muted-foreground" />
@@ -99,6 +120,16 @@ export default async function DashboardPage() {
           )}
         </section>
 
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Drafts</h2>
+            <Link href="/drafts" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <DraftList drafts={drafts} />
+        </section>
+
         <section className="grid md:grid-cols-2 gap-6">
           <div className="stat-card p-5">
             <div className="flex items-center justify-between mb-4">
@@ -111,7 +142,12 @@ export default async function DashboardPage() {
                 recentDocs.map((doc) => (
                   <Link
                     key={doc.id}
-                    href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`}
+                    href={documentReaderHref({
+                      slug: doc.slug,
+                      publicationId: doc.publicationId,
+                      publication: doc.publication,
+                      repository: doc.repository,
+                    })}
                     className="flex items-center gap-2 rounded-lg px-2 py-2.5 text-sm hover:bg-muted transition-colors"
                   >
                     <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -135,7 +171,12 @@ export default async function DashboardPage() {
                 bookmarks.map((b) => (
                   <Link
                     key={b.id}
-                    href={`/r/${b.document.repository.owner.username}/${b.document.repository.slug}/${b.document.slug}`}
+                    href={documentReaderHref({
+                      slug: b.document.slug,
+                      publicationId: b.document.publicationId,
+                      publication: b.document.publication,
+                      repository: b.document.repository,
+                    })}
                     className="flex items-center gap-2 rounded-lg px-2 py-2.5 text-sm hover:bg-muted transition-colors"
                   >
                     <FileText className="h-4 w-4 text-muted-foreground shrink-0" />

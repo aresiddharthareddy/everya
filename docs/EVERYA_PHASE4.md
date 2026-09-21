@@ -1,6 +1,6 @@
 # EVERYA Phase 4 — Trace + Knowledge Platform
 
-**Status:** IN PROGRESS  
+**Status:** COMPLETE  
 **Prerequisite:** Phase 3 complete  
 **Branch:** `cursor-branch`
 
@@ -18,17 +18,17 @@
 | 4.8 | Markdown/Obsidian import | ✅ |
 | 4.9 | Trace discovery | ✅ |
 | 4.10 | Trace following | ✅ |
-| 4.11 | Document relationships | ⬜ |
-| 4.12 | Contributors / ownership | ⬜ |
-| 4.13 | Export foundation | ⬜ |
+| 4.11 | Document relationships | ✅ |
+| 4.12 | Contributors / ownership | ✅ |
+| 4.13 | Export foundation | ✅ |
 | 4.14 | Mobile / APK | ✅ |
-| 4.15 | Security audit + verification | ⬜ |
+| 4.15 | Security audit + verification | ✅ |
 
 ## Key docs
 
 - Architecture: `EVERYA_PHASE4_ARCHITECTURE.md`
-- Verification: (pending) `EVERYA_PHASE4_VERIFICATION.md`
-- Security audit: (pending) `EVERYA_PHASE4_SECURITY_ARCHITECTURE_AUDIT.md`
+- Verification: `EVERYA_PHASE4_VERIFICATION.md`
+- Security audit: `EVERYA_PHASE4_SECURITY_ARCHITECTURE_AUDIT.md`
 
 ## Core decision (4.1)
 

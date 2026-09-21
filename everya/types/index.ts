@@ -22,6 +22,7 @@ export interface TreeNode {
   name: string;
   slug: string;
   type: "folder" | "document";
+  status?: string;
   children?: TreeNode[];
   href?: string;
 }

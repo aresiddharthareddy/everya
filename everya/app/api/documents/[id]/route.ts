@@ -3,8 +3,9 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { updateArticle } from "@/services/articles";
 import { autosaveDocument } from "@/services/documents";
+import { deleteDraftDocument } from "@/services/drafts";
 import { updateDocumentSchema } from "@/lib/validators";
-import { unauthorized, badRequest, notFound, jsonData, tooManyRequests } from "@/lib/api-response";
+import { unauthorized, badRequest, notFound, forbidden, jsonData, tooManyRequests } from "@/lib/api-response";
 import { clientRateLimitKey, rateLimit } from "@/lib/rate-limit";
 
 export async function PATCH(
@@ -32,4 +33,17 @@ export async function PATCH(
     (await autosaveDocument(id, session.user.id, parsed.data));
   if (!doc) return notFound();
   return jsonData(doc);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return unauthorized();
+
+  const { id } = await params;
+  const result = await deleteDraftDocument(id, session.user.id);
+  if (!result) return forbidden("Only drafts you can edit may be deleted");
+  return jsonData({ ok: true });
 }

@@ -4,7 +4,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify, calcReadingMinutes } from "@/lib/utils";
 import { createDocumentSchema } from "@/lib/validators";
-import { unauthorized, badRequest, notFound, jsonData, tooManyRequests } from "@/lib/api-response";
+import { canEditTraceContent, getTraceRole } from "@/lib/permissions/trace";
+import { unauthorized, badRequest, notFound, forbidden, jsonData, tooManyRequests } from "@/lib/api-response";
 import { clientRateLimitKey, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -25,9 +26,12 @@ export async function POST(req: NextRequest) {
 
   const { title, content, repoSlug } = parsed.data;
   const repo = await prisma.repository.findFirst({
-    where: { slug: repoSlug, ownerId: session.user.id },
+    where: { slug: repoSlug, publication: null },
   });
   if (!repo) return notFound("Repository not found");
+
+  const role = await getTraceRole(repo.id, session.user.id);
+  if (!role || !canEditTraceContent(role)) return forbidden();
 
   const base = slugify(title);
   let slug = base;
@@ -50,6 +54,8 @@ export async function POST(req: NextRequest) {
       readingMinutes: calcReadingMinutes(body),
       repositoryId: repo.id,
       authorId: session.user.id,
+      lastEditedById: session.user.id,
+      status: "DRAFT",
     },
   });
 

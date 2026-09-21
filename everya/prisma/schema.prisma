@@ -77,7 +77,8 @@ model User {
   sessions             Session[]
   accounts             Account[]
   repositories         Repository[]         @relation("RepoOwner")
-  documents            Document[]
+  documents            Document[]           @relation("DocumentAuthor")
+  documentsEdited      Document[]           @relation("DocumentLastEditor")
   comments             Comment[]
   ratings              Rating[]
   docLikes             DocumentLike[]
@@ -94,6 +95,7 @@ model User {
   publicationFollows   PublicationFollow[]
   traceFollows         TraceFollow[]
   traceMembers         TraceMember[]
+  documentRevisions    DocumentRevision[]
   interests            UserInterest[]
   contentReports       ContentReport[]      @relation("Reporter")
 }
@@ -266,7 +268,9 @@ model Document {
   folderId            String?
   folder              Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
   authorId            String
-  author              User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author              User          @relation("DocumentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  lastEditedById      String?
+  lastEditedBy        User?         @relation("DocumentLastEditor", fields: [lastEditedById], references: [id], onDelete: SetNull)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
@@ -279,6 +283,7 @@ model Document {
   readingProgress ReadingProgress[]
   linksFrom       DocumentLink[] @relation("DocumentLinkFrom")
   linksTo         DocumentLink[] @relation("DocumentLinkTo")
+  revisions       DocumentRevision[]
 
   @@unique([repositoryId, slug])
   @@index([readerCount])
@@ -443,6 +448,24 @@ model AnalyticsEvent {
 
   @@index([eventType, createdAt])
   @@index([userId, createdAt])
+}
+
+model DocumentRevision {
+  id             String        @id @default(cuid())
+  documentId     String
+  document       Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  revisionNumber Int
+  title          String
+  subtitle       String?
+  content        String
+  excerpt        String?
+  status         ArticleStatus
+  createdById    String
+  createdBy      User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@unique([documentId, revisionNumber])
+  @@index([documentId, createdAt])
 }
 
 model DocumentLink {

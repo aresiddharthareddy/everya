@@ -33,6 +33,7 @@ export function WriteArticleClient({
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const [error, setError] = useState("");
 
   const ensureDraft = useCallback(async () => {
@@ -90,9 +91,32 @@ export function WriteArticleClient({
     return () => clearTimeout(t);
   }, [content, title, subtitle, docId, save]);
 
+  const discard = async () => {
+    const id = docId || "";
+    if (!id) {
+      router.push(`/p/${handle}`);
+      return;
+    }
+    if (!window.confirm("Delete this draft permanently? This cannot be undone.")) return;
+    setDiscarding(true);
+    const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
+    setDiscarding(false);
+    if (!res.ok) {
+      setError("Could not discard draft");
+      return;
+    }
+    router.push(`/p/${handle}`);
+  };
+
   const publish = async () => {
     const id = docId || (await ensureDraft());
     if (!id) return;
+    if (
+      status === "DRAFT" &&
+      !window.confirm("Publish this article? It will be visible on your publication.")
+    ) {
+      return;
+    }
     setPublishing(true);
     await save();
     const res = await fetch(`/api/articles/${id}/publish`, { method: "POST" });
@@ -131,6 +155,10 @@ export function WriteArticleClient({
       primaryAction={publish}
       primaryLabel={publishing ? "Publishing…" : status === "PUBLISHED" ? "Update" : "Publish"}
       primaryLoading={publishing || creating}
+      secondaryAction={status === "DRAFT" ? save : undefined}
+      secondaryLabel={status === "DRAFT" ? "Save draft" : undefined}
+      discardAction={status === "DRAFT" && docId ? discard : undefined}
+      discardLoading={discarding}
     >
       <Input
         value={title}

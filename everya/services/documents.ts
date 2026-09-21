@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { canEditTraceContent, getTraceRole } from "@/lib/permissions/trace";
 import { calcReadingMinutes } from "@/lib/utils";
+import { snapshotDocumentAfterSave } from "@/services/document-revisions";
 import type { DocStats } from "@/types";
 
 export async function getDocumentStats(documentId: string): Promise<DocStats> {
@@ -54,24 +56,71 @@ export async function recordDocumentView(
   ]);
 }
 
+export async function publishTraceDocument(documentId: string, userId: string) {
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { status: true, publicationId: true, repositoryId: true, publishedAt: true },
+  });
+  if (!doc || doc.publicationId || doc.status === "ARCHIVED") return null;
+
+  const role = await getTraceRole(doc.repositoryId, userId);
+  if (!role || !canEditTraceContent(role)) return null;
+
+  return prisma.document.update({
+    where: { id: documentId },
+    data: { status: "PUBLISHED", publishedAt: doc.publishedAt ?? new Date() },
+  });
+}
+
 export async function autosaveDocument(
   documentId: string,
   userId: string,
   data: { title?: string; content?: string }
 ) {
-  const doc = await prisma.document.findFirst({
-    where: { id: documentId, authorId: userId },
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: {
+      id: true,
+      title: true,
+      subtitle: true,
+      excerpt: true,
+      status: true,
+      authorId: true,
+      content: true,
+      repositoryId: true,
+      publicationId: true,
+    },
   });
-  if (!doc) return null;
+  if (!doc || doc.publicationId) return null;
+
+  const role = await getTraceRole(doc.repositoryId, userId);
+  const canEdit = doc.authorId === userId || (role && canEditTraceContent(role));
+  if (!canEdit) return null;
 
   const content = data.content ?? doc.content;
-  return prisma.document.update({
+  const before = {
+    title: doc.title,
+    subtitle: doc.subtitle,
+    content: doc.content,
+    excerpt: doc.excerpt,
+    status: doc.status,
+  };
+  const updated = await prisma.document.update({
     where: { id: documentId },
     data: {
       title: data.title ?? doc.title,
       content,
       excerpt: content.slice(0, 200).replace(/[#*`\n]/g, " ").trim(),
       readingMinutes: calcReadingMinutes(content),
+      lastEditedById: userId,
     },
   });
+  await snapshotDocumentAfterSave(documentId, userId, before, {
+    title: updated.title,
+    subtitle: updated.subtitle,
+    content: updated.content,
+    excerpt: updated.excerpt,
+    status: updated.status,
+  });
+  return updated;
 }
