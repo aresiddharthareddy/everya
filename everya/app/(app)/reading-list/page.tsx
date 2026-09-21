@@ -4,25 +4,43 @@ import { formatDistanceToNow } from "date-fns";
 import { Bookmark } from "lucide-react";
 import { getServerSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { articleHref } from "@/services/feed";
 import { formatUsername, formatCount } from "@/lib/utils";
 
 export default async function ReadingListPage() {
   const session = await getServerSession();
   if (!session) redirect("/login?next=/reading-list");
 
-  const bookmarks = await prisma.bookmark.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      document: {
-        include: {
-          author: { select: { username: true, name: true } },
-          repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
-          tags: { include: { tag: { select: { name: true, slug: true } } } },
+  const [bookmarks, continueReading] = await Promise.all([
+    prisma.bookmark.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        document: {
+          include: {
+            author: { select: { username: true, name: true } },
+            publication: { select: { handle: true, name: true } },
+            repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
+            tags: { include: { tag: { select: { name: true, slug: true } } } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.readingProgress.findMany({
+      where: { userId: session.user.id, progress: { lt: 1, gt: 0 } },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+      include: {
+        document: {
+          include: {
+            author: { select: { username: true, name: true } },
+            publication: { select: { handle: true, name: true } },
+            repository: { select: { slug: true, owner: { select: { username: true } } } },
+          },
+        },
+      },
+    }),
+  ]);
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -33,6 +51,41 @@ export default async function ReadingListPage() {
         </p>
       </div>
 
+      {continueReading.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">
+            Continue reading
+          </h2>
+          <div className="divide-y divide-border rounded-xl border border-border">
+            {continueReading.map((row) => {
+              const doc = row.document;
+              const href = articleHref(doc);
+              const pct = Math.round(row.progress * 100);
+              return (
+                <Link key={row.id} href={href} className="block px-4 py-4 hover:bg-muted/50 transition-colors group">
+                  <p className="text-xs text-muted-foreground">
+                    {doc.author.name || formatUsername(doc.author.username)}
+                    {doc.publication ? ` · ${doc.publication.name}` : ""}
+                  </p>
+                  <h3 className="mt-1 font-serif text-lg tracking-tight group-hover:underline underline-offset-4">
+                    {doc.title}
+                  </h3>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-foreground rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{pct}%</span>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {doc.readingMinutes} min · updated {formatDistanceToNow(row.updatedAt, { addSuffix: true })}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {bookmarks.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center">
           <Bookmark className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
@@ -42,29 +95,33 @@ export default async function ReadingListPage() {
           </Link>
         </div>
       ) : (
-        <div className="divide-y divide-border">
-          {bookmarks.map((b) => {
-            const doc = b.document;
-            const href = `/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`;
-            return (
-              <Link key={b.id} href={href} className="block py-6 group">
-                <p className="text-xs text-muted-foreground">
-                  {doc.author.name || formatUsername(doc.author.username)} · {doc.repository.name}
-                </p>
-                <h2 className="mt-1 font-serif text-xl tracking-tight group-hover:underline underline-offset-4">
-                  {doc.title}
-                </h2>
-                {doc.excerpt && (
-                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">{doc.excerpt}</p>
-                )}
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {doc.readingMinutes} min · {formatCount(doc.readerCount)} readers · saved{" "}
-                  {formatDistanceToNow(b.createdAt, { addSuffix: true })}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
+        <section>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">Saved</h2>
+          <div className="divide-y divide-border">
+            {bookmarks.map((b) => {
+              const doc = b.document;
+              const href = articleHref(doc);
+              return (
+                <Link key={b.id} href={href} className="block py-6 group">
+                  <p className="text-xs text-muted-foreground">
+                    {doc.author.name || formatUsername(doc.author.username)}
+                    {doc.publication ? ` · ${doc.publication.name}` : ` · ${doc.repository.name}`}
+                  </p>
+                  <h2 className="mt-1 font-serif text-xl tracking-tight group-hover:underline underline-offset-4">
+                    {doc.title}
+                  </h2>
+                  {doc.excerpt && (
+                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">{doc.excerpt}</p>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {doc.readingMinutes} min · {formatCount(doc.readerCount)} readers · saved{" "}
+                    {formatDistanceToNow(b.createdAt, { addSuffix: true })}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       )}
     </div>
   );

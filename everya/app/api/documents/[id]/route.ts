@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { updateArticle } from "@/services/articles";
 import { autosaveDocument } from "@/services/documents";
 import { updateDocumentSchema } from "@/lib/validators";
 import { unauthorized, badRequest, notFound, jsonData, tooManyRequests } from "@/lib/api-response";
@@ -26,7 +27,9 @@ export async function PATCH(
     return badRequest(parsed.error.issues[0]?.message || "Invalid input", parsed.error.flatten());
   }
 
-  const doc = await autosaveDocument(id, session.user.id, parsed.data);
+  const doc =
+    (await updateArticle(id, session.user.id, parsed.data)) ??
+    (await autosaveDocument(id, session.user.id, parsed.data));
   if (!doc) return notFound();
   return jsonData(doc);
 }

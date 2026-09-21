@@ -11,6 +11,8 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 type SettingsUser = {
   name?: string | null;
   bio?: string | null;
+  website?: string | null;
+  image?: string | null;
   username?: string | null;
   email?: string | null;
 };
@@ -20,14 +22,20 @@ function ProfileForm({
   email,
   initialName,
   initialBio,
+  initialWebsite,
+  initialImage,
 }: {
   username: string;
   email: string;
   initialName: string;
   initialBio: string;
+  initialWebsite: string;
+  initialImage: string;
 }) {
   const [name, setName] = useState(initialName);
   const [bio, setBio] = useState(initialBio);
+  const [website, setWebsite] = useState(initialWebsite);
+  const [image, setImage] = useState(initialImage);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +44,12 @@ function ProfileForm({
     const res = await fetch("/api/users/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, bio }),
+      body: JSON.stringify({
+        name,
+        bio,
+        website: website.trim() || null,
+        image: image.trim() || null,
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -70,6 +83,26 @@ function ProfileForm({
           <label className="text-sm font-medium mb-1.5 block" htmlFor="bio">Bio</label>
           <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
         </div>
+        <div>
+          <label className="text-sm font-medium mb-1.5 block" htmlFor="website">Website</label>
+          <Input
+            id="website"
+            type="url"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="https://yoursite.com"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium mb-1.5 block" htmlFor="avatar-url">Avatar URL</label>
+          <Input
+            id="avatar-url"
+            type="url"
+            value={image}
+            onChange={(e) => setImage(e.target.value)}
+            placeholder="https://example.com/avatar.jpg"
+          />
+        </div>
         {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
         <Button onClick={save}>{saved ? "Saved!" : "Save changes"}</Button>
       </CardContent>
@@ -90,6 +123,8 @@ export function SettingsClient({ user }: { user: SettingsUser }) {
         email={user.email || ""}
         initialName={user.name || ""}
         initialBio={user.bio || ""}
+        initialWebsite={user.website || ""}
+        initialImage={user.image || ""}
       />
 
       <Card>

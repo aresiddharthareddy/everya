@@ -1,12 +1,38 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
+import { getForYouFeed, getFollowingFeed, getLatestFeed, getTrendingFeed, articleHref } from "@/services/feed";
 import { formatUsername } from "@/lib/utils";
 import { ExploreTabs, type ExploreTab } from "@/components/feed/explore-tabs";
 import { FeedStoryRow } from "@/components/feed/feed-story-row";
 import { TagPills } from "@/components/docs/tag-pills";
 import { Avatar } from "@/components/ui/avatar";
 import { FollowButton } from "@/components/social/follow-button";
+import { EmptyState } from "@/components/everya/empty-state";
+
+const feedInclude = {
+  author: { select: { username: true, name: true, image: true } },
+  publication: { select: { id: true, handle: true, name: true, logo: true } },
+  repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
+  tags: { include: { tag: { select: { name: true, slug: true } } } },
+  ratings: { select: { value: true } },
+  _count: { select: { likes: true, comments: true } },
+} as const;
+
+type ExploreDoc = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  readingMinutes: number;
+  readerCount: number;
+  author: { username: string; name: string | null; image: string | null };
+  publication: { handle: string; name: string } | null;
+  repository: { slug: string; name: string; owner: { username: string } };
+  tags: { tag: { name: string; slug: string } }[];
+  _count: { likes: number; comments: number };
+  ratings?: { value: number }[];
+};
 
 function avgRating(values: { value: number }[]) {
   if (!values.length) return 0;
@@ -19,7 +45,7 @@ export default async function ExplorePage({
   searchParams: Promise<{ tab?: string; tag?: string }>;
 }) {
   const { tab: rawTab, tag } = await searchParams;
-  const tab = (["trending", "latest", "following"].includes(rawTab || "")
+  const tab = (["for-you", "trending", "latest", "following"].includes(rawTab || "")
     ? rawTab
     : "trending") as ExploreTab;
   const session = await getServerSession();
@@ -50,42 +76,39 @@ export default async function ExplorePage({
     }),
   ]);
 
-  const tagFilter = tag ? { tags: { some: { tag: { slug: tag } } } } : {};
-  let docWhere: Record<string, unknown> = {
-    repository: { visibility: "PUBLIC" },
-    ...tagFilter,
-  };
+  let docs: ExploreDoc[] = [];
+  let forYouEmpty = false;
 
-  if (tab === "following") {
+  if (tag) {
+    docs = await prisma.document.findMany({
+      where: {
+        status: "PUBLISHED",
+        tags: { some: { tag: { slug: tag } } },
+        OR: [
+          { publication: { visibility: "PUBLIC" } },
+          { publicationId: null, repository: { visibility: "PUBLIC" } },
+        ],
+      },
+      orderBy: tab === "latest" || tab === "following" ? { updatedAt: "desc" } : { readerCount: "desc" },
+      take: 20,
+      include: feedInclude,
+    });
+  } else if (tab === "for-you") {
     if (session) {
-      const following = await prisma.userFollow.findMany({
-        where: { followerId: session.user.id },
-        select: { followingId: true },
-      });
-      const ids = following.map((f) => f.followingId);
-      docWhere = ids.length ? { ...docWhere, authorId: { in: ids } } : { id: { in: [] } };
-    } else {
-      docWhere = { id: { in: [] } };
+      const [userFollows, pubFollows] = await Promise.all([
+        prisma.userFollow.count({ where: { followerId: session.user.id } }),
+        prisma.publicationFollow.count({ where: { userId: session.user.id } }),
+      ]);
+      if (userFollows + pubFollows === 0) forYouEmpty = true;
+      else docs = (await getForYouFeed(session.user.id)) as ExploreDoc[];
     }
+  } else if (tab === "following") {
+    if (session) docs = (await getFollowingFeed(session.user.id)) as ExploreDoc[];
+  } else if (tab === "latest") {
+    docs = (await getLatestFeed(session?.user.id)) as ExploreDoc[];
+  } else {
+    docs = (await getTrendingFeed(session?.user.id)) as ExploreDoc[];
   }
-
-  const orderBy =
-    tab === "latest" || tab === "following"
-      ? { updatedAt: "desc" as const }
-      : { readerCount: "desc" as const };
-
-  const docs = await prisma.document.findMany({
-    where: docWhere,
-    orderBy,
-    take: 20,
-    include: {
-      author: { select: { username: true, name: true, image: true } },
-      repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
-      tags: { include: { tag: { select: { name: true, slug: true } } } },
-      ratings: { select: { value: true } },
-      _count: { select: { likes: true, comments: true } },
-    },
-  });
 
   const tagList = tags.map((t) => ({ name: t.name, slug: t.slug, count: t._count.documents }));
   const [featured, ...rest] = docs;
@@ -101,6 +124,8 @@ export default async function ExplorePage({
       )
     : new Set<string>();
 
+  const showFeed = !(tab === "for-you" && (!session || forYouEmpty)) && !(tab === "following" && !session);
+
   return (
     <div className="min-h-full bg-muted/15">
       <div className="mx-auto max-w-6xl px-5 sm:px-8 py-8 sm:py-12">
@@ -113,59 +138,87 @@ export default async function ExplorePage({
 
             <ExploreTabs active={tab} tag={tag} />
 
-            {tab === "following" && !session && (
+            {tab === "for-you" && !session && (
               <div className="mt-8 stat-card p-8 text-center">
-                <p className="text-sm text-muted-foreground">Sign in to see stories from authors you follow.</p>
-                <Link href="/login?next=/explore?tab=following" className="inline-block mt-4 text-sm font-medium px-5 py-2 rounded-full bg-foreground text-background">
+                <p className="text-sm text-muted-foreground">Sign in for a personalized feed.</p>
+                <Link
+                  href="/login?next=/explore?tab=for-you"
+                  className="inline-block mt-4 text-sm font-medium px-5 py-2 rounded-full bg-foreground text-background"
+                >
                   Sign in
                 </Link>
               </div>
             )}
 
-            <section className="mt-8 divide-y divide-border/60">
-              {docs.length === 0 ? (
-                <p className="py-12 text-sm text-muted-foreground text-center">
-                  {tab === "following" ? "Follow authors to build your personalized feed." : "No stories match this filter."}
-                </p>
-              ) : (
-                <>
-                  {featured && tab === "trending" && !tag && (
-                    <FeedStoryRow
-                      featured
-                      href={`/r/${featured.repository.owner.username}/${featured.repository.slug}/${featured.slug}`}
-                      title={featured.title}
-                      excerpt={featured.excerpt}
-                      authorName={featured.author.name}
-                      authorUsername={featured.author.username}
-                      authorImage={featured.author.image}
-                      readingMinutes={featured.readingMinutes}
-                      readerCount={featured.readerCount}
-                      likeCount={featured._count.likes}
-                      commentCount={featured._count.comments}
-                      avgRating={avgRating(featured.ratings)}
-                      tags={featured.tags.map((t) => t.tag)}
-                    />
-                  )}
-                  {(tab === "trending" && !tag ? rest : docs).map((doc) => (
-                    <FeedStoryRow
-                      key={doc.id}
-                      href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`}
-                      title={doc.title}
-                      excerpt={doc.excerpt}
-                      authorName={doc.author.name}
-                      authorUsername={doc.author.username}
-                      authorImage={doc.author.image}
-                      readingMinutes={doc.readingMinutes}
-                      readerCount={doc.readerCount}
-                      likeCount={doc._count.likes}
-                      commentCount={doc._count.comments}
-                      avgRating={avgRating(doc.ratings)}
-                      tags={doc.tags.map((t) => t.tag)}
-                    />
-                  ))}
-                </>
-              )}
-            </section>
+            {tab === "for-you" && session && forYouEmpty && (
+              <div className="mt-8">
+                <EmptyState
+                  title="Your feed is empty"
+                  description="Follow authors and publications to personalize For You."
+                  actionLabel="Create a publication"
+                  actionHref="/publications/new"
+                />
+              </div>
+            )}
+
+            {tab === "following" && !session && (
+              <div className="mt-8 stat-card p-8 text-center">
+                <p className="text-sm text-muted-foreground">Sign in to see stories from authors you follow.</p>
+                <Link
+                  href="/login?next=/explore?tab=following"
+                  className="inline-block mt-4 text-sm font-medium px-5 py-2 rounded-full bg-foreground text-background"
+                >
+                  Sign in
+                </Link>
+              </div>
+            )}
+
+            {showFeed && (
+              <section className="mt-8 divide-y divide-border/60">
+                {docs.length === 0 ? (
+                  <p className="py-12 text-sm text-muted-foreground text-center">
+                    {tab === "following" ? "Follow authors to build your personalized feed." : "No stories match this filter."}
+                  </p>
+                ) : (
+                  <>
+                    {featured && tab === "trending" && !tag && (
+                      <FeedStoryRow
+                        featured
+                        href={articleHref(featured)}
+                        title={featured.title}
+                        excerpt={featured.excerpt}
+                        authorName={featured.author.name}
+                        authorUsername={featured.author.username}
+                        authorImage={featured.author.image}
+                        readingMinutes={featured.readingMinutes}
+                        readerCount={featured.readerCount}
+                        likeCount={featured._count.likes}
+                        commentCount={featured._count.comments}
+                        avgRating={avgRating(featured.ratings ?? [])}
+                        tags={featured.tags.map((t) => t.tag)}
+                      />
+                    )}
+                    {(tab === "trending" && !tag ? rest : docs).map((doc) => (
+                      <FeedStoryRow
+                        key={doc.id}
+                        href={articleHref(doc)}
+                        title={doc.title}
+                        excerpt={doc.excerpt}
+                        authorName={doc.author.name}
+                        authorUsername={doc.author.username}
+                        authorImage={doc.author.image}
+                        readingMinutes={doc.readingMinutes}
+                        readerCount={doc.readerCount}
+                        likeCount={doc._count.likes}
+                        commentCount={doc._count.comments}
+                        avgRating={avgRating(doc.ratings ?? [])}
+                        tags={doc.tags.map((t) => t.tag)}
+                      />
+                    ))}
+                  </>
+                )}
+              </section>
+            )}
           </div>
 
           <aside className="space-y-8 lg:pt-16">
@@ -187,7 +240,9 @@ export default async function ExplorePage({
                         <Link href={`/u/${author.username}`} className="text-sm font-medium hover:underline truncate block">
                           {author.name || formatUsername(author.username)}
                         </Link>
-                        <p className="text-xs text-muted-foreground">{author._count.documents} stories · {author._count.followers} followers</p>
+                        <p className="text-xs text-muted-foreground">
+                          {author._count.documents} stories · {author._count.followers} followers
+                        </p>
                       </div>
                       <FollowButton
                         username={author.username}
@@ -209,7 +264,9 @@ export default async function ExplorePage({
                     <li key={repo.id}>
                       <Link href={`/r/${repo.owner.username}/${repo.slug}`} className="block group">
                         <p className="text-sm font-medium group-hover:underline">{repo.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatUsername(repo.owner.username)} · {repo._count.documents} stories</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatUsername(repo.owner.username)} · {repo._count.documents} stories
+                        </p>
                       </Link>
                     </li>
                   ))}

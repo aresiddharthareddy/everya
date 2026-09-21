@@ -15,7 +15,14 @@ export function ReaderTopBar() {
   const user = session?.user as { username?: string; name?: string; image?: string } | undefined;
 
   const parts = pathname.split("/").filter(Boolean);
-  const backHref = parts.length >= 3 ? `/r/${parts[1]}/${parts[2]}` : "/explore";
+  const backHref =
+    parts[0] === "p" && parts.length >= 2
+      ? `/p/${parts[1]}`
+      : parts.length >= 3
+        ? `/r/${parts[1]}/${parts[2]}`
+        : "/explore";
+  const showBack =
+    (parts[0] === "p" && parts.length >= 3) || (parts[0] === "r" && parts.length >= 4);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-md">
@@ -78,11 +85,11 @@ export function ReaderTopBar() {
           )}
         </div>
       </div>
-      {parts.length >= 4 && (
+      {showBack && (
         <div className="border-t border-border/40 bg-muted/30">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 py-1.5">
             <Link href={backHref} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              ← Back to collection
+              ← {parts[0] === "p" ? "Back to publication" : "Back to collection"}
             </Link>
           </div>
         </div>

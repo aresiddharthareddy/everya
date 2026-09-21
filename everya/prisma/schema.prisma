@@ -13,12 +13,41 @@ enum RepositoryVisibility {
   ENTERPRISE
 }
 
+enum PublicationVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum PublicationRole {
+  OWNER
+  ADMIN
+  EDITOR
+  WRITER
+  CONTRIBUTOR
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum NotificationType {
   COMMENT
   LIKE
   RATING
   REPLY
   SYSTEM
+  FOLLOW
+  PUBLICATION_INVITE
+  MEMBERSHIP
+  ARTICLE_PUBLISHED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
 }
 
 model User {
@@ -29,23 +58,30 @@ model User {
   image         String?
   username      String    @unique
   bio           String?
+  website       String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sessions      Session[]
-  accounts      Account[]
-  repositories  Repository[]     @relation("RepoOwner")
-  documents     Document[]
-  comments      Comment[]
-  ratings       Rating[]
-  docLikes      DocumentLike[]
-  commentLikes  CommentLike[]
-  bookmarks     Bookmark[]
-  notifications Notification[]   @relation("NotificationRecipient")
-  sentNotifs    Notification[]   @relation("NotificationActor")
-  documentViews DocumentView[]
-  followers     UserFollow[]     @relation("UserFollowers")
-  following     UserFollow[]     @relation("UserFollowing")
+  sessions             Session[]
+  accounts             Account[]
+  repositories         Repository[]         @relation("RepoOwner")
+  documents            Document[]
+  comments             Comment[]
+  ratings              Rating[]
+  docLikes             DocumentLike[]
+  commentLikes         CommentLike[]
+  bookmarks            Bookmark[]
+  notifications        Notification[]       @relation("NotificationRecipient")
+  sentNotifs           Notification[]       @relation("NotificationActor")
+  documentViews        DocumentView[]
+  readingProgress      ReadingProgress[]
+  followers            UserFollow[]         @relation("UserFollowers")
+  following            UserFollow[]         @relation("UserFollowing")
+  ownedPublications    Publication[]        @relation("PublicationOwner")
+  publicationMembers   PublicationMember[]
+  publicationFollows   PublicationFollow[]
+  interests            UserInterest[]
+  contentReports       ContentReport[]      @relation("Reporter")
 }
 
 model Session {
@@ -86,6 +122,52 @@ model Verification {
   updatedAt  DateTime @updatedAt
 }
 
+model Publication {
+  id           String                @id @default(cuid())
+  name         String
+  handle       String                @unique
+  description  String?
+  logo         String?
+  coverImage   String?
+  visibility   PublicationVisibility @default(PUBLIC)
+  ownerId      String
+  owner        User                  @relation("PublicationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  repositoryId String                @unique
+  repository   Repository            @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  members   PublicationMember[]
+  followers PublicationFollow[]
+  articles  Document[]
+
+  @@index([ownerId])
+}
+
+model PublicationMember {
+  id            String          @id @default(cuid())
+  publicationId String
+  publication   Publication     @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          PublicationRole
+  createdAt     DateTime        @default(now())
+
+  @@unique([publicationId, userId])
+  @@index([userId])
+}
+
+model PublicationFollow {
+  id            String      @id @default(cuid())
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([publicationId, userId])
+}
+
 model Repository {
   id          String               @id @default(cuid())
   name        String
@@ -97,8 +179,9 @@ model Repository {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
-  folders   Folder[]
-  documents Document[]
+  folders     Folder[]
+  documents   Document[]
+  publication Publication?
 
   @@unique([ownerId, slug])
 }
@@ -122,33 +205,42 @@ model Folder {
 }
 
 model Document {
-  id             String     @id @default(cuid())
-  title          String
-  slug           String
-  content        String     @default("")
-  excerpt        String?
-  readingMinutes Int        @default(5)
-  readerCount    Int        @default(0)
-  readingMinutesTotal Int   @default(0)
-  repositoryId   String
-  repository     Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-  folderId       String?
-  folder         Folder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  authorId       String
-  author         User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id                  String        @id @default(cuid())
+  title               String
+  subtitle            String?
+  slug                String
+  content             String        @default("")
+  excerpt             String?
+  coverImage          String?
+  status              ArticleStatus @default(PUBLISHED)
+  publishedAt         DateTime?
+  readingMinutes      Int           @default(5)
+  readerCount         Int           @default(0)
+  readingMinutesTotal Int           @default(0)
+  repositoryId        String
+  repository          Repository    @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  publicationId       String?
+  publication         Publication?  @relation(fields: [publicationId], references: [id], onDelete: SetNull)
+  folderId            String?
+  folder              Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  authorId            String
+  author              User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  comments Comment[]
-  ratings  Rating[]
-  likes    DocumentLike[]
-  bookmarks Bookmark[]
-  views    DocumentView[]
-  tags     DocumentTag[]
+  comments        Comment[]
+  ratings         Rating[]
+  likes           DocumentLike[]
+  bookmarks       Bookmark[]
+  views           DocumentView[]
+  tags            DocumentTag[]
+  readingProgress ReadingProgress[]
 
   @@unique([repositoryId, slug])
   @@index([readerCount])
   @@index([updatedAt])
+  @@index([status, publishedAt])
+  @@index([publicationId, status])
 }
 
 model UserFollow {
@@ -162,12 +254,24 @@ model UserFollow {
   @@unique([followerId, followingId])
 }
 
+model UserInterest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tagId])
+}
+
 model Tag {
-  id        String        @id @default(cuid())
-  name      String        @unique
-  slug      String        @unique
+  id        String         @id @default(cuid())
+  name      String         @unique
+  slug      String         @unique
   documents DocumentTag[]
-  createdAt DateTime      @default(now())
+  interests UserInterest[]
+  createdAt DateTime       @default(now())
 }
 
 model DocumentTag {
@@ -180,18 +284,18 @@ model DocumentTag {
 }
 
 model Comment {
-  id         String        @id @default(cuid())
+  id         String    @id @default(cuid())
   content    String
   documentId String
-  document   Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
   authorId   String
-  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parentId   String?
-  parent     Comment?      @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    Comment[]     @relation("CommentThread")
-  likeCount  Int           @default(0)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  parent     Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentThread")
+  likeCount  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   likes CommentLike[]
 }
@@ -242,6 +346,19 @@ model Bookmark {
   @@unique([documentId, userId])
 }
 
+model ReadingProgress {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  progress   Float    @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, documentId])
+  @@index([userId, updatedAt])
+}
+
 model Notification {
   id        String           @id @default(cuid())
   type      NotificationType
@@ -254,6 +371,34 @@ model Notification {
   actorId   String?
   actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
   createdAt DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+model ContentReport {
+  id         String       @id @default(cuid())
+  reporterId String
+  reporter   User         @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType String
+  targetId   String
+  reason     String
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+
+  @@index([targetType, targetId])
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  eventType  String
+  userId     String?
+  entityType String?
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([userId, createdAt])
 }
 
 model DocumentView {

@@ -8,6 +8,7 @@ export const createDocumentSchema = z.object({
 
 export const updateDocumentSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
+  subtitle: z.string().trim().max(300).optional().nullable(),
   content: z.string().max(500_000).optional(),
 });
 

@@ -351,6 +351,30 @@ async function main() {
 
   await ensureTags(prisma);
 
+  const everyaPub = await prisma.publication.create({
+    data: {
+      name: "EveryA Engineering",
+      handle: "everya-engineering",
+      description: "Publication-first stories from the EveryA platform team.",
+      ownerId: alex.id,
+      repositoryId: platformRepo.id,
+      visibility: "PUBLIC",
+    },
+  });
+  await prisma.publicationMember.create({
+    data: { publicationId: everyaPub.id, userId: alex.id, role: "OWNER" },
+  });
+  await prisma.publicationMember.create({
+    data: { publicationId: everyaPub.id, userId: infraops.id, role: "WRITER" },
+  });
+  await prisma.document.updateMany({
+    where: { id: { in: [gettingStarted.id] } },
+    data: { publicationId: everyaPub.id, status: "PUBLISHED", publishedAt: new Date() },
+  });
+  await prisma.publicationFollow.create({
+    data: { publicationId: everyaPub.id, userId: kernel.id },
+  });
+
   for (const [followerId, followingId] of [
     [infraops.id, alex.id],
     [kernel.id, alex.id],

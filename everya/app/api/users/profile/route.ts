@@ -14,12 +14,23 @@ export async function PATCH(req: NextRequest) {
     return badRequest(parsed.error.issues[0]?.message || "Invalid input", parsed.error.flatten());
   }
 
-  const { name, bio } = parsed.data;
+  const { name, bio, website, image } = parsed.data;
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: {
       name: name?.trim() || null,
       bio: bio?.trim() || null,
+      website: website?.trim() || null,
+      image: image ?? undefined,
+    },
+    select: {
+      id: true,
+      name: true,
+      bio: true,
+      website: true,
+      image: true,
+      username: true,
+      email: true,
     },
   });
 

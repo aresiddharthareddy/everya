@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   if (!limit.ok) return tooManyRequests();
 
   const q = req.nextUrl.searchParams.get("q") || "";
-  const results = await searchAll(q);
+  const type = req.nextUrl.searchParams.get("type") as "all" | "articles" | "authors" | "publications" | null;
+  const results = await searchAll(q, { type: type ?? "all" });
   return jsonData({ results });
 }

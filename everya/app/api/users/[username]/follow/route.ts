@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notify";
+import { trackEvent } from "@/services/analytics";
 import { unauthorized, badRequest, notFound, jsonData, tooManyRequests } from "@/lib/api-response";
 import { clientRateLimitKey, rateLimit } from "@/lib/rate-limit";
 
@@ -65,9 +67,19 @@ export async function POST(
 
   if (existing) {
     await prisma.userFollow.delete({ where: { id: existing.id } });
+    await trackEvent({ eventType: "unfollow", userId: user.id, entityId: target.id });
   } else {
     await prisma.userFollow.create({
       data: { followerId: user.id, followingId: target.id },
+    });
+    await trackEvent({ eventType: "follow", userId: user.id, entityId: target.id });
+    await notify({
+      userId: target.id,
+      actorId: user.id,
+      type: "FOLLOW",
+      title: "New follower",
+      message: `${user.name || user.email} started following you`,
+      link: `/u/${(user as { username?: string }).username || target.username}`,
     });
   }
 

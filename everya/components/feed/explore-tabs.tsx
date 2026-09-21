@@ -2,9 +2,10 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { id: "trending", label: "Trending" },
-  { id: "latest", label: "Latest" },
+  { id: "for-you", label: "For You" },
   { id: "following", label: "Following" },
+  { id: "latest", label: "Latest" },
+  { id: "trending", label: "Trending" },
 ] as const;
 
 export type ExploreTab = (typeof tabs)[number]["id"];
