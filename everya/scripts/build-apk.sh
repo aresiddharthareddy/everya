@@ -6,10 +6,6 @@ ASSETS="$ROOT/apk/android/app/src/main/assets/www"
 mkdir -p "$ASSETS"
 cp -R "$WWW/." "$ASSETS/"
 
-if [ -n "${EVERYA_APP_URL:-}" ]; then
-  export ORG_GRADLE_PROJECT_EVERYA_APP_URL="$EVERYA_APP_URL"
-fi
-
 cd "$ROOT/apk/android"
 chmod +x gradlew 2>/dev/null || true
 ./gradlew assembleDebug --no-daemon

@@ -3,155 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0c0b0a" />
+  <meta name="theme-color" content="#fafaf9" />
   <title>EVERYA</title>
   <style>
-    :root { --bg:#faf9f6; --fg:#1a1917; --muted:#6b6560; --line:#e8e4dc; --card:#fff; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased; }
-    a { color: inherit; text-decoration: none; }
-    header { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; height:52px; padding:0 16px; border-bottom:1px solid var(--line); background:rgba(250,249,246,.92); backdrop-filter:blur(10px); }
+    :root { --bg:#fafaf9; --fg:#1c1917; --muted:#57534e; --line:#d6d3d1; --card:#fff; --surface:#f5f5f4; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased; padding-bottom:calc(64px + env(safe-area-inset-bottom)); }
+    a { color:inherit; text-decoration:none; }
+    header { position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; height:52px; padding:0 16px; border-bottom:1px solid var(--line); background:rgba(250,250,249,.95); }
     .brand { letter-spacing:.18em; font-size:12px; font-weight:650; }
-    nav { display:flex; gap:14px; font-size:13px; color:var(--muted); }
-    main { max-width:720px; margin:0 auto; padding:28px 18px 80px; }
-    h1 { font-family: Georgia, "Times New Roman", serif; font-weight:500; letter-spacing:-.03em; line-height:1.12; font-size:clamp(1.8rem,5vw,2.6rem); margin:0 0 12px; }
-    .lede { color:var(--muted); line-height:1.65; font-size:16px; }
-    .row { display:flex; gap:10px; margin-top:22px; flex-wrap:wrap; }
-    .btn { display:inline-flex; align-items:center; height:40px; padding:0 18px; border-radius:999px; font-size:13px; font-weight:600; border:1px solid var(--line); }
-    .btn.solid { background:var(--fg); color:var(--bg); border-color:var(--fg); }
-    .story { padding:22px 0; border-bottom:1px solid var(--line); }
+    .icon-btn { position:relative; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; border:1px solid var(--line); background:var(--card); font-size:14px; }
+    .badge-count { position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#1c1917; color:#fafaf9; font-size:10px; align-items:center; justify-content:center; }
+    main { max-width:720px; margin:0 auto; padding:20px 16px 24px; }
+    .banner { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:12px; color:var(--muted); margin-bottom:16px; }
+    .page-title { font-family:Georgia,serif; font-weight:500; letter-spacing:-.03em; font-size:clamp(1.6rem,5vw,2.2rem); margin:0 0 8px; line-height:1.15; }
+    .section { font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:24px 0 10px; }
+    .lede, .excerpt { color:var(--muted); line-height:1.6; font-size:15px; margin:0; }
     .meta { font-size:12px; color:var(--muted); margin-bottom:6px; }
-    .title { font-family: Georgia, serif; font-size:1.45rem; line-height:1.2; }
-    article .body { font-family: Georgia, serif; font-size:1.125rem; line-height:1.8; }
-    article .body h2 { font-family: ui-sans-serif, system-ui; font-size:1.25rem; margin:1.8rem 0 .6rem; }
-    article .body p { margin:1rem 0; }
-    article .body pre, article .body code { font-family: ui-monospace, monospace; font-size:.86em; background:#f3f1eb; }
-    article .body pre { padding:12px; border-radius:10px; overflow:auto; }
-    article .body blockquote { border-left:3px solid var(--fg); padding-left:14px; color:var(--muted); font-style:italic; }
-    .actions { display:flex; gap:8px; margin:20px 0; }
-    .chip { border:1px solid var(--line); border-radius:999px; height:34px; padding:0 12px; background:transparent; font-size:12px; }
-    .chip.on { background:#1a1917; color:#faf9f6; }
-    textarea { width:100%; min-height:88px; border:1px solid var(--line); border-radius:12px; padding:10px; font: inherit; background:var(--card); }
+    .card { display:block; padding:16px 0; border-bottom:1px solid var(--line); }
+    .card.flat { padding:14px; border:1px solid var(--line); border-radius:14px; margin-bottom:10px; background:var(--card); }
+    .card.read { opacity:.65; }
+    .title { font-family:Georgia,serif; font-size:1.25rem; line-height:1.25; margin:4px 0; }
+    .badge { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:999px; border:1px solid var(--line); margin-bottom:6px; }
+    .row, .stack { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0; }
+    .stack { flex-direction:column; }
+    .btn, .chip { appearance:none; display:inline-flex; align-items:center; justify-content:center; min-height:38px; padding:0 16px; border-radius:999px; font-size:13px; font-weight:600; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; }
+    .btn.solid, .chip.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+    .chip { font-size:12px; min-height:32px; }
+    .input { width:100%; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font:inherit; background:var(--card); margin:8px 0; }
+    .input.tall { min-height:140px; resize:vertical; }
+    .tree { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--card); }
+    .tree-item { display:flex; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); font-size:14px; }
+    .tree-item:last-child { border-bottom:0; }
+    .tree-item small { color:var(--muted); }
+    .body { font-family:Georgia,serif; font-size:1.05rem; line-height:1.75; margin-top:16px; }
+    .body h1,.body h2,.body h3 { font-family:ui-sans-serif,system-ui; }
+    .body pre, .body code { font-family:ui-monospace,monospace; font-size:.86em; background:var(--surface); }
+    .body pre { padding:12px; border-radius:10px; overflow:auto; }
+    .body blockquote { border-left:3px solid var(--fg); padding-left:14px; color:var(--muted); }
     .comment { padding:12px 0; border-top:1px solid var(--line); font-size:14px; }
-    .hidden { display:none; }
-    .notice { background:#f3f1eb; border-radius:14px; padding:14px 16px; font-size:13px; color:var(--muted); margin-bottom:22px; }
+    .stats { display:flex; gap:16px; font-size:13px; color:var(--muted); margin:12px 0; }
+    textarea { width:100%; min-height:88px; border:1px solid var(--line); border-radius:12px; padding:10px; font:inherit; background:var(--card); margin:8px 0; }
+    nav.tabs { position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; border-top:1px solid var(--line); background:rgba(255,255,255,.96); padding-bottom:env(safe-area-inset-bottom); }
+    .tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:56px; font-size:10px; color:var(--muted); }
+    .tab span { font-size:16px; }
+    .tab.on { color:var(--fg); font-weight:600; }
   </style>
 </head>
 <body>
   <header>
     <a class="brand" href="#/">EVERYA</a>
-    <nav>
-      <a href="#/explore">Explore</a>
-      <a href="#/write">Write</a>
-    </nav>
+    <a class="icon-btn" href="#/notifications" aria-label="Notifications">
+      🔔
+      <span id="notif-badge" class="badge-count" style="display:none"></span>
+    </a>
   </header>
   <main id="app"></main>
+  <nav id="tabs" class="tabs"></nav>
   <script src="data.js"></script>
-  <script>
-    const store = {
-      likes: JSON.parse(localStorage.getItem("likes") || "{}"),
-      saves: JSON.parse(localStorage.getItem("saves") || "{}"),
-      comments: JSON.parse(localStorage.getItem("comments") || "{}"),
-      drafts: JSON.parse(localStorage.getItem("drafts") || "[]"),
-    };
-    const persist = () => {
-      localStorage.setItem("likes", JSON.stringify(store.likes));
-      localStorage.setItem("saves", JSON.stringify(store.saves));
-      localStorage.setItem("comments", JSON.stringify(store.comments));
-      localStorage.setItem("drafts", JSON.stringify(store.drafts));
-    };
-
-    function md(src) {
-      return src
-        .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/^### (.*)$/gm,"<h3>$1</h3>")
-        .replace(/^## (.*)$/gm,"<h2>$1</h2>")
-        .replace(/^# (.*)$/gm,"<h2>$1</h2>")
-        .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>")
-        .replace(/`([^`]+)`/g,"<code>$1</code>")
-        .replace(/```[\s\S]*?```/g, m => "<pre>"+m.replace(/```/g,"")+"</pre>")
-        .replace(/^> (.*)$/gm,"<blockquote>$1</blockquote>")
-        .replace(/^\|.*\|$/gm, m => "<p>"+m+"</p>")
-        .replace(/\n\n/g,"</p><p>")
-        .replace(/^/, "<p>").replace(/$/, "</p>");
-    }
-
-    function home() {
-      return `
-        <p class="notice">Offline preview APK — full EVERYA (accounts, search, editor) lives in the Next.js app. Stories below are the seeded catalog, saved on this device.</p>
-        <h1>Stories worth keeping.</h1>
-        <p class="lede">EVERYA is a publishing home for long-form writing and structured knowledge. This package lets you read the product on a phone without hosting localhost.</p>
-        <div class="row">
-          <a class="btn solid" href="#/explore">Read stories</a>
-          <a class="btn" href="#/write">Write on this device</a>
-        </div>
-        ${STORIES.slice(0,3).map(card).join("")}
-      `;
-    }
-    function card(s) {
-      return `<a class="story" href="#/s/${s.id}"><div class="meta">${s.author} in ${s.collection} · ${s.minutes} min</div><div class="title">${s.title}</div><p class="lede">${s.excerpt}</p></a>`;
-    }
-    function explore() {
-      return `<h1>Explore</h1>${STORIES.concat(store.drafts).map(card).join("")}`;
-    }
-    function story(id) {
-      const s = STORIES.concat(store.drafts).find(x => x.id === id);
-      if (!s) return `<p>Story not found.</p>`;
-      const liked = !!store.likes[id];
-      const saved = !!store.saves[id];
-      const comments = store.comments[id] || [];
-      return `
-        <article>
-          <div class="meta">${s.author} · ${s.collection} · ${s.minutes} min read</div>
-          <h1>${s.title}</h1>
-          <div class="actions">
-            <button class="chip ${liked?"on":""}" onclick="toggleLike('${id}')">${liked?"Liked":"Like"}</button>
-            <button class="chip ${saved?"on":""}" onclick="toggleSave('${id}')">${saved?"Saved":"Save"}</button>
-          </div>
-          <div class="body">${md(s.content)}</div>
-          <h2 style="font-size:1.1rem;margin-top:2.5rem">Discussion</h2>
-          <textarea id="c" placeholder="Write a comment…"></textarea>
-          <div class="row"><button class="btn solid" onclick="addComment('${id}')">Post</button></div>
-          ${comments.map(c => `<div class="comment"><strong>You</strong><p>${c}</p></div>`).join("") || `<p class="lede">No comments yet.</p>`}
-        </article>`;
-    }
-    function write() {
-      return `
-        <h1>Write</h1>
-        <p class="lede">Drafts stay on this phone. Publishing to the live product needs the hosted Next.js app.</p>
-        <input id="wt" placeholder="Title" style="width:100%;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 12px;margin:8px 0;font-size:16px;background:var(--card)" />
-        <textarea id="wb" placeholder="Tell the story…"></textarea>
-        <div class="row"><button class="btn solid" onclick="saveDraft()">Save draft</button></div>
-      `;
-    }
-    window.toggleLike = (id) => { store.likes[id] = !store.likes[id]; persist(); route(); };
-    window.toggleSave = (id) => { store.saves[id] = !store.saves[id]; persist(); route(); };
-    window.addComment = (id) => {
-      const el = document.getElementById("c");
-      if (!el.value.trim()) return;
-      store.comments[id] = store.comments[id] || [];
-      store.comments[id].push(el.value.trim());
-      persist(); route();
-    };
-    window.saveDraft = () => {
-      const title = document.getElementById("wt").value.trim();
-      const content = document.getElementById("wb").value.trim();
-      if (!title || !content) return alert("Add a title and body.");
-      store.drafts.unshift({ id: "d"+Date.now(), title, content, excerpt: content.slice(0,140), author: "You", collection: "On this device", minutes: Math.max(1, Math.ceil(content.split(/\s+/).length/200)) });
-      persist();
-      location.hash = "#/explore";
-    };
-    function route() {
-      const h = location.hash.slice(2) || "";
-      const app = document.getElementById("app");
-      if (h.startsWith("s/")) app.innerHTML = story(h.slice(2));
-      else if (h === "explore") app.innerHTML = explore();
-      else if (h === "write") app.innerHTML = write();
-      else app.innerHTML = home();
-      window.scrollTo(0,0);
-    }
-    addEventListener("hashchange", route);
-    route();
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>

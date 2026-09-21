@@ -5,10 +5,6 @@ $Assets = Join-Path $Root "apk\android\app\src\main\assets\www"
 New-Item -ItemType Directory -Force -Path $Assets | Out-Null
 Copy-Item -Path (Join-Path $Www "*") -Destination $Assets -Recurse -Force
 
-if ($env:EVERYA_APP_URL) {
-  $env:ORG_GRADLE_PROJECT_EVERYA_APP_URL = $env:EVERYA_APP_URL
-}
-
 Push-Location (Join-Path $Root "apk\android")
 & .\gradlew.bat assembleDebug --no-daemon
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Gradle build failed (exit $LASTEXITCODE). Install Android SDK and set sdk.dir in apk/android/local.properties." }

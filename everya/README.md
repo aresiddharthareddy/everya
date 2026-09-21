@@ -513,11 +513,10 @@ npm run dev
 # Login: alex@everya.dev / demo12345
 ```
 
-**Android APK** — WebView shell for the full hosted EVERYA app (feed, traces, publications, auth):
+**Android APK** — offline preview with bundled dummy seed data (no server required until production):
 
 ```bash
 # Requires JDK 17+ and Android SDK (ANDROID_HOME or local.properties sdk.dir)
-# Default server URL: http://98.93.146.99 — override with EVERYA_APP_URL
 npm run build:apk
 # → public/EVERYA-offline.apk
 ```

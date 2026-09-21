@@ -1,78 +1,75 @@
-const STORIES = [
-  {
-    id: "getting-started",
-    title: "Getting Started",
-    author: "@alex",
-    collection: "Platform Docs",
-    minutes: 4,
-    excerpt: "Learn how to use EVERYA for teams who need structured, high-density documentation.",
-    content: `# Getting Started with EVERYA
+const DATA = {
+  users: [
+    { username: "alex", name: "Alex Chen", bio: "Platform engineer. Building reliable systems.", followers: 1280, following: 42 },
+    { username: "infraops", name: "Infra Ops", bio: "SRE · Kubernetes · Observability", followers: 890, following: 31 },
+    { username: "kernel", name: "Kernel Team", bio: "Low-level systems research.", followers: 412, following: 18 },
+  ],
+  traces: [
+    {
+      username: "alex", slug: "platform-docs", name: "Platform Docs",
+      description: "Core platform documentation and guides",
+      followers: 2400, docs: [
+        { slug: "getting-started", title: "Getting Started", folder: "Guides", minutes: 4, readers: 18200,
+          excerpt: "Learn how to use EVERYA for your team",
+          content: `# Getting Started with EVERYA\n\nEVERYA is a **technical knowledge platform** for engineering teams.\n\n## Quick start\n\n\`\`\`bash\nnpm install && npm run dev\n\`\`\`\n\n## Core concepts\n\n- **Trace** — structured knowledge collection\n- **Document** — Markdown pages with metrics\n- **Folder** — nested organization\n\n> Ship documentation that engineers actually read.` },
+        { slug: "api-design", title: "API Design Guidelines", folder: "Guides / API", minutes: 8, readers: 9400,
+          excerpt: "Standards for building consistent APIs",
+          content: `# API Design Guidelines\n\n## Principles\n\n- **Consistency** over cleverness\n- **Explicit** error responses\n- **Versioned** endpoints\n\nAll write endpoints require a valid session.` },
+      ],
+    },
+    {
+      username: "infraops", slug: "sre-runbooks", name: "SRE Runbooks",
+      description: "Operational runbooks and incident response",
+      followers: 1100, docs: [
+        { slug: "k8s-incident-runbook", title: "Kubernetes Incident Runbook", folder: "Incidents", minutes: 12, readers: 5600,
+          excerpt: "Step-by-step incident response for K8s",
+          content: `# Kubernetes Incident Runbook\n\n## Pod crash looping\n\n1. Check events\n2. Inspect previous logs\n3. Verify resource limits\n\n## Escalation\n\nContact **@infraops** for P1 incidents.` },
+        { slug: "observability", title: "Observability Stack", folder: "Root", minutes: 10, readers: 7200,
+          excerpt: "Metrics, logs, and traces for production",
+          content: `# Observability Stack\n\n## The three pillars\n\nMetrics, logs, and traces.\n\n## SLOs\n\n- Availability 99.9%\n- Latency p99 < 200ms` },
+      ],
+    },
+    {
+      username: "kernel", slug: "systems-research", name: "Systems Research",
+      description: "Internal research notes",
+      followers: 320, docs: [
+        { slug: "allocator-internals", title: "Memory Allocator Internals", folder: "Root", minutes: 15, readers: 890,
+          excerpt: "Slab allocation and fragmentation",
+          content: `# Memory Allocator Internals\n\nResearch notes on slab allocation and TLB pressure.` },
+      ],
+    },
+  ],
+  publications: [
+    {
+      handle: "everya-engineering", name: "EveryA Engineering",
+      description: "Publication-first stories from the platform team.",
+      owner: "alex", followers: 890,
+      articles: [
+        { slug: "getting-started", title: "Getting Started", author: "alex", minutes: 4,
+          excerpt: "Why we built EVERYA for long-form technical writing",
+          content: `# Why EVERYA\n\nA publishing home for stories worth keeping — with traces for structured knowledge alongside.` },
+      ],
+    },
+  ],
+  notifications: [
+    { id: "n1", type: "COMMENT", title: "New reply", message: "@kernel replied to your comment", actor: "kernel", read: false },
+    { id: "n2", type: "LIKE", title: "Document liked", message: "@alex liked your runbook", actor: "alex", read: false },
+    { id: "n3", type: "TRACE", title: "Trace followed", message: "@kernel followed Platform Docs", actor: "kernel", read: true },
+  ],
+  exploreTags: ["kubernetes", "api-design", "observability", "platform", "sre", "research"],
+};
 
-EVERYA is a **technical knowledge platform** designed for engineering teams who need structured, high-density documentation.
-
-## Quick start
-
-npm install && npm run dev
-
-## Core concepts
-
-Repository — a collection of docs, like a project wiki.
-Document — Markdown pages with metrics and comments.
-Folder — nested organization within a repo.
-
-> Ship documentation that engineers actually read.`
-  },
-  {
-    id: "api-design",
-    title: "API Design Guidelines",
-    author: "@alex",
-    collection: "Platform Docs",
-    minutes: 8,
-    excerpt: "Consistency over cleverness. Explicit errors. Versioned endpoints.",
-    content: `# API Design Guidelines
-
-## Principles
-
-- **Consistency** over cleverness
-- **Explicit** error responses
-- **Versioned** endpoints
-
-All write endpoints require a valid session.`
-  },
-  {
-    id: "k8s",
-    title: "Kubernetes Incident Runbook",
-    author: "@infraops",
-    collection: "SRE Runbooks",
-    minutes: 12,
-    excerpt: "Crash loops, NotReady nodes, and how to escalate a P1.",
-    content: `# Kubernetes Incident Runbook
-
-## Pod crash looping
-
-1. Check events
-2. Inspect previous logs
-3. Verify resource limits
-
-## Escalation
-
-Contact **@infraops** for P1 incidents.`
-  },
-  {
-    id: "observability",
-    title: "Observability Stack",
-    author: "@infraops",
-    collection: "SRE Runbooks",
-    minutes: 10,
-    excerpt: "Metrics, logs, traces, and the SLOs that keep production honest.",
-    content: `# Observability Stack
-
-## The three pillars
-
-Metrics, logs, and traces.
-
-## SLOs
-
-Availability 99.9%. Latency p99 under 200ms. Error rate under 0.1%.`
-  }
-];
+DATA.feed = DATA.traces.flatMap((t) =>
+  t.docs.map((d) => ({
+    id: `${t.username}/${t.slug}/${d.slug}`,
+    type: "document",
+    title: d.title,
+    excerpt: d.excerpt,
+    author: t.username,
+    trace: t.name,
+    traceSlug: t.slug,
+    docSlug: d.slug,
+    minutes: d.minutes,
+    readers: d.readers,
+  }))
+);
