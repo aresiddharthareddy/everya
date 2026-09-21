@@ -5,6 +5,8 @@ const store = {
   comments: JSON.parse(localStorage.getItem("comments") || "{}"),
   reported: JSON.parse(localStorage.getItem("reported") || "{}"),
   traceFollows: JSON.parse(localStorage.getItem("traceFollows") || "{}"),
+  memberships: JSON.parse(localStorage.getItem("memberships") || "{}"),
+  subscriptions: JSON.parse(localStorage.getItem("subscriptions") || "{}"),
   drafts: JSON.parse(localStorage.getItem("drafts") || "[]"),
   notifRead: JSON.parse(localStorage.getItem("notifRead") || "{}"),
 };
@@ -15,6 +17,8 @@ const persist = () => {
   localStorage.setItem("comments", JSON.stringify(store.comments));
   localStorage.setItem("reported", JSON.stringify(store.reported));
   localStorage.setItem("traceFollows", JSON.stringify(store.traceFollows));
+  localStorage.setItem("memberships", JSON.stringify(store.memberships));
+  localStorage.setItem("subscriptions", JSON.stringify(store.subscriptions));
   localStorage.setItem("drafts", JSON.stringify(store.drafts));
   localStorage.setItem("notifRead", JSON.stringify(store.notifRead));
 };
@@ -26,6 +30,20 @@ const doc = (u, s, d) => trace(u, s)?.docs.find((x) => x.slug === d);
 const draftDoc = (u, s, d) => trace(u, s)?.draftDocs?.find((x) => x.slug === d);
 const pub = (h) => DATA.publications.find((p) => p.handle === h);
 const canEditTrace = (u) => store.user === u || store.user === "alex" || store.user === "infraops";
+const hasMembership = (creator, tier) => {
+  const m = store.memberships[creator];
+  if (!m || m.status !== "ACTIVE") return false;
+  if (tier === "PREMIUM") return m.tier === "PREMIUM";
+  return true;
+};
+const canAccessDoc = (item, owner) => {
+  if (!item.accessLevel || item.accessLevel === "PUBLIC") return true;
+  if (canEditTrace(owner)) return true;
+  if (item.accessLevel === "MEMBERS") return hasMembership(owner, "MEMBER");
+  if (item.accessLevel === "PREMIUM") return hasMembership(owner, "PREMIUM");
+  return false;
+};
+const accessBadge = (level) => level && level !== "PUBLIC" ? `<span class="badge">${level}</span>` : "";
 
 function md(src) {
   return esc(src)
@@ -141,7 +159,7 @@ function viewTrace(u, s) {
   const following = !!store.traceFollows[key];
   const tree = t.docs.map((d) => `
     <a class="tree-item" href="#/u/${u}/trace/${s}/${d.slug}">
-      <span>${esc(d.title)}</span>
+      <span>${esc(d.title)} ${d.accessLevel && d.accessLevel !== "PUBLIC" ? `<small>· ${d.accessLevel}</small>` : ""}</span>
       <small>${d.minutes} min</small>
     </a>`).join("");
   const drafts = canEditTrace(u) ? (t.draftDocs || []) : [];
@@ -185,6 +203,7 @@ function viewDoc(u, s, d, isDraft) {
   const item = isDraft ? draftDoc(u, s, d) : doc(u, s, d);
   if (!item) return `<p>Document not found.</p>`;
   if (isDraft && !canEditTrace(u)) return `<p>This draft is not available.</p>`;
+  const allowed = canAccessDoc(item, u);
   const id = `${u}/${s}/${d}`;
   const liked = !!store.likes[id];
   const saved = !!store.saves[id];
@@ -192,7 +211,7 @@ function viewDoc(u, s, d, isDraft) {
   const editor = item.lastEditor && item.lastEditor !== item.author ? item.lastEditor : null;
   return `<div id="read-progress" class="read-progress"></div>
     <div class="meta">@${esc(u)} · ${esc(trace(u,s).name)} · ${item.minutes} min${isDraft ? " · Draft" : ""}</div>
-    <h1 class="page-title">${esc(item.title)}</h1>
+    <h1 class="page-title">${esc(item.title)}</h1>${accessBadge(item.accessLevel)}
     ${editor ? `<p class="lede">Written by @${esc(item.author)} · Last edited by @${esc(editor)}</p>` : `<p class="lede">By @${esc(item.author || u)}</p>`}
     <div class="row">
       <button class="chip ${liked?"on":""}" onclick="toggleLike('${id}')">${liked?"Liked":"Like"}</button>
@@ -201,7 +220,7 @@ function viewDoc(u, s, d, isDraft) {
       <a class="chip" href="#/u/${u}/trace/${s}">Trace</a>
       ${isDraft ? `<a class="chip" href="#/create">Edit draft</a>` : ""}
     </div>
-    <article class="body" id="article-body">${md(item.content)}</article>
+    ${allowed ? `<article class="body" id="article-body">${md(item.content)}</article>` : `<div class="card flat"><p class="lede"><strong>${esc(item.accessLevel)} content.</strong> Join membership to read this document.</p><a class="btn solid" href="#/memberships">View memberships</a></div>`}
     ${!isDraft ? docNavFooter(u, s, item) : ""}
     <section id="discussion">
       <h2 class="section">Discussion</h2>
@@ -265,6 +284,36 @@ function viewNotifications() {
     }).join("")}`;
 }
 
+function viewCreator(u) {
+  const c = DATA.creators.find((x) => x.username === u) || { username: u, tagline: user(u).bio, members: 0, plans: 0 };
+  const plans = DATA.membershipPlans.filter((p) => p.creator === u);
+  return `<div class="meta">Creator</div>
+    <h1 class="page-title">${esc(user(u).name)}</h1>
+    <p class="lede">${esc(c.tagline)}</p>
+    <div class="stats"><span>${c.members} members</span><span>${c.plans} plans</span></div>
+    <a class="btn" href="#/profile/${u}">Public profile</a>
+    <h2 class="section">Plans</h2>
+    ${plans.map((p) => `<div class="card flat"><div class="title">${esc(p.name)}</div><p class="excerpt">${esc(p.tier)} · $${(p.priceCents/100).toFixed(2)}/mo</p></div>`).join("")}
+    <a class="btn solid" href="#/memberships">Memberships</a>`;
+}
+
+function viewMemberships() {
+  const mine = Object.entries(store.memberships).map(([creator, m]) => `<div class="card flat"><div class="title">@${esc(creator)}</div><p class="excerpt">${esc(m.tier)} · ${esc(m.status)}</p></div>`).join("");
+  const plans = DATA.membershipPlans.map((p) => `
+    <div class="card flat">
+      <div class="title">${esc(p.name)}</div>
+      <p class="excerpt">@${esc(p.creator)} · ${esc(p.tier)} · $${(p.priceCents/100).toFixed(2)}/mo</p>
+      <button class="btn solid" onclick="joinPlan('${p.id}','${p.creator}','${p.tier}')">Join (demo)</button>
+    </div>`).join("");
+  const payNote = DATA.paymentConfigured ? "" : `<p class="lede">Payment provider not configured — demo membership only (no fake payment success).</p>`;
+  return `<h1 class="page-title">Memberships</h1>
+    <p class="lede">Membership ≠ follow. This grants content access.</p>
+    ${payNote}
+    <h2 class="section">Your memberships</h2>${mine || `<p class="lede">None yet.</p>`}
+    <h2 class="section">Available plans</h2>${plans}
+    <a class="btn" href="#/creator/${store.user}">Creator dashboard</a>`;
+}
+
 function viewProfile(u) {
   const p = user(u);
   const traces = DATA.traces.filter((t) => t.username === u).map((t) => `
@@ -276,6 +325,7 @@ function viewProfile(u) {
     <div class="meta">@${esc(u)}</div>
     <p class="lede">${esc(p.bio)}</p>
     <button class="btn" onclick="shareLink('#/profile/${u}')">Share profile</button>
+    ${p.isCreator ? `<a class="btn" href="#/creator/${u}">Creator profile</a>` : ""}
     <div class="stats"><span>${p.followers} followers</span><span>${p.following} following</span></div>
     <h2 class="section">Traces</h2>${traces || `<p class="lede">No traces.</p>`}
     ${u !== store.user ? `<button class="btn solid" onclick="switchUser('${u}')">View as @${esc(u)}</button>` : ""}`;
@@ -351,6 +401,16 @@ window.saveDraft = () => {
   location.hash = "#/drafts";
 };
 window.switchUser = (u) => { store.user = u; persist(); location.hash = "#/profile/" + u; };
+window.joinPlan = (id, creator, tier) => {
+  if (!DATA.paymentConfigured) {
+    store.memberships[creator] = { planId: id, tier, status: "ACTIVE" };
+    persist();
+    alert("Demo membership activated (no payment processed).");
+    route();
+    return;
+  }
+  alert("Checkout requires hosted app with Stripe configured.");
+};
 window.markRead = (id) => { store.notifRead[id] = true; persist(); };
 
 function navTab(path, label, icon) {
@@ -393,6 +453,8 @@ function route() {
   else if (parts[0] === "create") html = viewCreate();
   else if (parts[0] === "notifications") html = viewNotifications();
   else if (parts[0] === "login") html = viewLogin();
+  else if (parts[0] === "creator" && parts[1]) html = viewCreator(parts[1]);
+  else if (parts[0] === "memberships") html = viewMemberships();
   else if (parts[0] === "profile" && parts[1]) html = viewProfile(parts[1]);
   else if (parts[0] === "u" && parts[2] === "trace" && parts[3] && parts[4]) {
     const isDraft = !!draftDoc(parts[1], parts[3], parts[4]) && !doc(parts[1], parts[3], parts[4]);

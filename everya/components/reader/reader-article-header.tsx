@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Pencil } from "lucide-react";
@@ -33,6 +34,7 @@ export function ReaderArticleHeader({
   follow,
   editHref,
   shareUrl,
+  badge,
 }: {
   title: string;
   subtitle?: string | null;
@@ -63,6 +65,7 @@ export function ReaderArticleHeader({
   };
   editHref?: string;
   shareUrl?: string;
+  badge?: ReactNode;
 }) {
   return (
     <header data-doc-header className="mb-10">
@@ -76,7 +79,10 @@ export function ReaderArticleHeader({
         className="mb-4"
       />
 
-      <h1 className="typo-article-title text-[2.25rem] sm:text-[2.75rem]">{title}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="typo-article-title text-[2.25rem] sm:text-[2.75rem]">{title}</h1>
+        {badge}
+      </div>
       {subtitle && <p className="typo-article-subtitle mt-4 max-w-2xl">{subtitle}</p>}
 
       {coverImage && (

@@ -24,6 +24,9 @@ import { ReaderAuthorCard } from "@/components/reader/reader-author-card";
 import { StickyEngagementBar } from "@/components/reader/sticky-engagement-bar";
 import { KnowledgeNav } from "@/components/navigation/knowledge-nav";
 import { formatUsername } from "@/lib/utils";
+import { checkContentEntitlement } from "@/services/entitlements";
+import { PremiumPaywall } from "@/components/creator/premium-paywall";
+import { AccessBadge } from "@/components/creator/access-badge";
 
 async function loadTraceDocument(username: string, traceSlug: string, docSlug: string) {
   return prisma.document.findFirst({
@@ -82,7 +85,11 @@ export default async function TraceDocumentPage({
   if (document.status === "DRAFT" && (!traceRole || !canEditTraceContent(traceRole))) notFound();
   const canEdit = traceRole ? canEditTraceContent(traceRole) : false;
   const isAuthor = session?.user.id === document.authorId;
-  await recordDocumentView(document.id, session?.user.id);
+  const entitlement = await checkContentEntitlement(document, session?.user.id, {
+    traceEditor: canEdit,
+  });
+  const canReadContent = entitlement.allowed;
+  if (canReadContent) await recordDocumentView(document.id, session?.user.id);
 
   const [stats, tree, comments, userLike, userBookmark, userRating, commentCount, isFollowing, docLinks, contributors] = await Promise.all([
     getDocumentStats(document.id),
@@ -134,7 +141,7 @@ export default async function TraceDocumentPage({
       <HashScroll />
       <ReadingProgress />
       <ArticleReader
-        content={document.content}
+        content={canReadContent ? document.content : ""}
         tree={<KnowledgeTree tree={tree} basePath={basePath} activeSlug={docSlug} />}
       >
         <article data-article>
@@ -160,6 +167,7 @@ export default async function TraceDocumentPage({
             author={document.author}
             lastEditor={document.lastEditedBy}
             tags={document.tags.map((t) => t.tag)}
+            badge={<AccessBadge level={document.accessLevel} />}
             stats={stats}
             commentCount={commentCount}
             documentId={document.id}
@@ -168,7 +176,15 @@ export default async function TraceDocumentPage({
             editHref={canEdit ? `${basePath}/${docSlug}/edit` : undefined}
             shareUrl={shareUrl}
           />
-          <ReaderBody content={document.content} />
+          {canReadContent ? (
+            <ReaderBody content={document.content} />
+          ) : (
+            <PremiumPaywall
+              accessLevel={document.accessLevel}
+              creatorUsername={document.repository.owner.username}
+              signedIn={!!session}
+            />
+          )}
           <DocumentRelationships links={docLinks} />
           {contributors && <DocumentContributors contributors={contributors.contributors} />}
           <DocumentNavFooter

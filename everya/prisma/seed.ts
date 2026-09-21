@@ -399,7 +399,61 @@ async function main() {
     });
   }
 
+  await prisma.creatorProfile.upsert({
+    where: { userId: alex.id },
+    create: {
+      userId: alex.id,
+      tagline: "Building EveryA — knowledge for engineering teams.",
+      links: JSON.stringify([{ label: "GitHub", url: "https://github.com" }]),
+      isCreator: true,
+    },
+    update: {},
+  });
+
+  const memberPlan = await prisma.membershipPlan.create({
+    data: {
+      creatorId: alex.id,
+      repositoryId: platformRepo.id,
+      name: "Platform Insider",
+      description: "Access members-only platform docs.",
+      tier: "MEMBER",
+      priceCents: 500,
+      interval: "month",
+    },
+  });
+  const premiumPlan = await prisma.membershipPlan.create({
+    data: {
+      creatorId: alex.id,
+      repositoryId: platformRepo.id,
+      name: "Platform Premium",
+      description: "Full premium API and advanced content.",
+      tier: "PREMIUM",
+      priceCents: 1500,
+      interval: "month",
+    },
+  });
+
+  await prisma.document.update({
+    where: { id: apiDesign.id },
+    data: { accessLevel: "PREMIUM" },
+  });
+  await prisma.document.update({
+    where: { id: k8sRunbook.id },
+    data: { accessLevel: "MEMBERS" },
+  });
+
+  await prisma.creatorMembership.create({
+    data: {
+      userId: kernel.id,
+      creatorId: alex.id,
+      planId: memberPlan.id,
+      repositoryId: platformRepo.id,
+      status: "ACTIVE",
+    },
+  });
+
   console.log("✅ Seed complete!");
+  console.log(`   Premium plan id: ${premiumPlan.id}`);
   console.log("   Demo accounts (password: demo12345):");
   console.log("   @alex, @infraops, @kernel");
 }

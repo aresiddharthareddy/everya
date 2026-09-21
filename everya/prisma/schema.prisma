@@ -62,6 +62,44 @@ enum DocumentLinkType {
   PART_OF
 }
 
+enum ContentAccessLevel {
+  PUBLIC
+  MEMBERS
+  PREMIUM
+}
+
+enum MembershipPlanTier {
+  MEMBER
+  PREMIUM
+}
+
+enum CreatorMembershipStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingSubscriptionStatus {
+  CREATED
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentTransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum CreatorRevenueStatus {
+  PENDING
+  AVAILABLE
+  PAID
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -98,6 +136,14 @@ model User {
   documentRevisions    DocumentRevision[]
   interests            UserInterest[]
   contentReports       ContentReport[]      @relation("Reporter")
+  creatorProfile       CreatorProfile?
+  membershipPlans      MembershipPlan[]       @relation("PlanCreator")
+  creatorMemberships   CreatorMembership[]    @relation("MembershipUser")
+  grantedMemberships   CreatorMembership[]    @relation("MembershipCreator")
+  billingSubscriptions BillingSubscription[]
+  paymentTransactions  PaymentTransaction[]
+  creatorRevenues      CreatorRevenue[]       @relation("RevenueCreator")
+  payoutBalance        CreatorPayoutBalance?
 }
 
 model Session {
@@ -153,9 +199,11 @@ model Publication {
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
 
-  members   PublicationMember[]
-  followers PublicationFollow[]
-  articles  Document[]
+  members            PublicationMember[]
+  followers          PublicationFollow[]
+  articles           Document[]
+  membershipPlans    MembershipPlan[]
+  creatorMemberships CreatorMembership[]
 
   @@index([ownerId])
 }
@@ -197,9 +245,11 @@ model Repository {
 
   folders     Folder[]
   documents   Document[]
-  publication Publication?
-  followers   TraceFollow[]
-  members     TraceMember[]
+  publication        Publication?
+  followers          TraceFollow[]
+  members            TraceMember[]
+  membershipPlans    MembershipPlan[]
+  creatorMemberships CreatorMembership[]
 
   @@unique([ownerId, slug])
 }
@@ -256,7 +306,8 @@ model Document {
   content             String        @default("")
   excerpt             String?
   coverImage          String?
-  status              ArticleStatus @default(PUBLISHED)
+  status              ArticleStatus     @default(PUBLISHED)
+  accessLevel         ContentAccessLevel @default(PUBLIC)
   publishedAt         DateTime?
   readingMinutes      Int           @default(5)
   readerCount         Int           @default(0)
@@ -492,4 +543,138 @@ model DocumentView {
 
   @@index([createdAt])
   @@index([documentId, createdAt])
+}
+
+model CreatorProfile {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tagline   String?
+  links     String?
+  isCreator Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MembershipPlan {
+  id              String             @id @default(cuid())
+  creatorId       String
+  creator         User               @relation("PlanCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  publicationId   String?
+  publication     Publication?       @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  repositoryId    String?
+  repository      Repository?        @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  tier            MembershipPlanTier @default(MEMBER)
+  priceCents      Int                @default(0)
+  currency        String             @default("USD")
+  interval        String             @default("month")
+  active          Boolean            @default(true)
+  providerPriceId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  memberships   CreatorMembership[]
+  subscriptions BillingSubscription[]
+  transactions  PaymentTransaction[]
+
+  @@index([creatorId, active])
+  @@index([publicationId])
+  @@index([repositoryId])
+}
+
+/// Audience membership — NOT editorial PublicationMember, NOT social Follow
+model CreatorMembership {
+  id            String                  @id @default(cuid())
+  userId        String
+  user          User                    @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  creatorId     String
+  creator       User                    @relation("MembershipCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  planId        String?
+  plan          MembershipPlan?         @relation(fields: [planId], references: [id], onDelete: SetNull)
+  publicationId String?
+  publication   Publication?            @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  repositoryId  String?
+  repository    Repository?             @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  status        CreatorMembershipStatus @default(ACTIVE)
+  startsAt      DateTime                @default(now())
+  endsAt        DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@unique([userId, publicationId])
+  @@unique([userId, repositoryId])
+  @@index([creatorId, status])
+  @@index([userId, status])
+}
+
+model BillingSubscription {
+  id                     String                    @id @default(cuid())
+  userId                 String
+  user                   User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId                 String
+  plan                   MembershipPlan            @relation(fields: [planId], references: [id], onDelete: Cascade)
+  status                 BillingSubscriptionStatus @default(CREATED)
+  provider               String?
+  providerSubscriptionId String?                   @unique
+  providerCustomerId     String?
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelledAt            DateTime?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  transactions PaymentTransaction[]
+
+  @@index([userId, status])
+  @@index([planId])
+}
+
+model PaymentTransaction {
+  id                 String                   @id @default(cuid())
+  userId               String
+  user                 User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId       String?
+  subscription         BillingSubscription?     @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  planId               String?
+  plan                 MembershipPlan?          @relation(fields: [planId], references: [id], onDelete: SetNull)
+  amountCents          Int
+  currency             String                   @default("USD")
+  platformFeeCents     Int                      @default(0)
+  creatorAmountCents   Int                      @default(0)
+  status               PaymentTransactionStatus @default(PENDING)
+  provider             String?
+  providerPaymentId    String?                  @unique
+  providerEventId      String?                  @unique
+  metadata             String?
+  createdAt            DateTime                 @default(now())
+
+  revenue CreatorRevenue?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model CreatorRevenue {
+  id               String               @id @default(cuid())
+  creatorId        String
+  creator          User                 @relation("RevenueCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  transactionId    String               @unique
+  transaction      PaymentTransaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  grossCents       Int
+  platformFeeCents Int
+  netCents         Int
+  status           CreatorRevenueStatus @default(PENDING)
+  createdAt        DateTime             @default(now())
+
+  @@index([creatorId, status])
+}
+
+model CreatorPayoutBalance {
+  creatorId      String   @id
+  creator        User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  availableCents Int      @default(0)
+  pendingCents   Int      @default(0)
+  totalPaidCents Int      @default(0)
+  updatedAt      DateTime @updatedAt
 }

@@ -60,9 +60,14 @@ export default async function DashboardPage() {
           description="Your writing workspace — collections, drafts, and quick stats."
           actions={
             <div className="flex gap-2">
+              <Link href="/creator">
+                <Button variant="outline" size="sm">
+                  <BarChart3 className="h-4 w-4" /> Creator
+                </Button>
+              </Link>
               <Link href="/stats">
                 <Button variant="outline" size="sm">
-                  <BarChart3 className="h-4 w-4" /> Stats
+                  Stats
                 </Button>
               </Link>
               <Link href="/create">
