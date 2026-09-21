@@ -131,5 +131,5 @@ export function articleHref(doc: {
   repository: { slug: string; owner: { username: string } };
 }) {
   if (doc.publication) return `/p/${doc.publication.handle}/${doc.slug}`;
-  return `/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`;
+  return `/u/${doc.repository.owner.username}/trace/${doc.repository.slug}/${doc.slug}`;
 }

@@ -9,7 +9,8 @@ import { SearchModal } from "@/components/search/search-modal";
 function isArticleReader(pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === "p" && parts.length === 3 && parts[2] !== "write") return true;
-  return parts[0] === "r" && parts.length === 4 && !pathname.endsWith("/edit") && !pathname.endsWith("/new");
+  if (parts[0] === "r" && parts.length === 4 && !pathname.endsWith("/edit") && !pathname.endsWith("/new")) return true;
+  return parts[0] === "u" && parts[2] === "trace" && parts.length === 5 && !pathname.endsWith("/edit") && !pathname.endsWith("/new");
 }
 
 export function AppShell({

@@ -74,7 +74,7 @@ export function LeftSidebar({
             {repositories.map((repo) => (
               <Link
                 key={repo.id}
-                href={`/r/${repo.ownerUsername}/${repo.slug}`}
+                href={`/u/${repo.ownerUsername}/trace/${repo.slug}`}
                 className={cn(
                   "block rounded-md px-2.5 py-2 typo-body-sm truncate motion-fast min-h-[44px] flex items-center",
                   isCollectionActive(pathname, repo.slug)

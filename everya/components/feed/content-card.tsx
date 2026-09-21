@@ -60,7 +60,7 @@ function ContextLine({
         </Link>
       ) : collection ? (
         <Link
-          href={`/r/${collection.ownerUsername}/${collection.slug}`}
+          href={`/u/${collection.ownerUsername}/trace/${collection.slug}`}
           className="inline-flex items-center gap-1.5 typo-caption normal-case tracking-normal text-foreground hover:underline underline-offset-4"
         >
           <FolderGit2 className="h-3 w-3" aria-hidden="true" />

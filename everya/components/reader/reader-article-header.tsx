@@ -22,6 +22,7 @@ export function ReaderArticleHeader({
   contentType,
   publication,
   collection,
+  trace,
   author,
   tags,
   stats,
@@ -39,6 +40,7 @@ export function ReaderArticleHeader({
   contentType: ContentType;
   publication?: { name: string; handle: string } | null;
   collection?: { name: string; slug: string; ownerUsername: string } | null;
+  trace?: { name: string; slug: string; ownerUsername: string } | null;
   author: { username: string; name: string | null; image: string | null };
   tags?: { name: string; slug: string }[];
   stats: { readerCount: number; likeCount: number; avgRating: number; readingMinutes: number };
@@ -66,6 +68,7 @@ export function ReaderArticleHeader({
         contentType={contentType}
         publication={publication}
         collection={collection}
+        trace={trace}
         className="mb-4"
       />
 

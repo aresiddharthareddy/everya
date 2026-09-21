@@ -50,6 +50,18 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum TraceRole {
+  EDITOR
+  CONTRIBUTOR
+}
+
+enum DocumentLinkType {
+  RELATED
+  PREVIOUS
+  NEXT
+  PART_OF
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -80,6 +92,8 @@ model User {
   ownedPublications    Publication[]        @relation("PublicationOwner")
   publicationMembers   PublicationMember[]
   publicationFollows   PublicationFollow[]
+  traceFollows         TraceFollow[]
+  traceMembers         TraceMember[]
   interests            UserInterest[]
   contentReports       ContentReport[]      @relation("Reporter")
 }
@@ -182,8 +196,36 @@ model Repository {
   folders     Folder[]
   documents   Document[]
   publication Publication?
+  followers   TraceFollow[]
+  members     TraceMember[]
 
   @@unique([ownerId, slug])
+}
+
+/// Product concept: Trace — backed by Repository (no separate table)
+model TraceFollow {
+  id           String     @id @default(cuid())
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([repositoryId, userId])
+  @@index([userId])
+}
+
+model TraceMember {
+  id           String     @id @default(cuid())
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         TraceRole
+  createdAt    DateTime   @default(now())
+
+  @@unique([repositoryId, userId])
+  @@index([userId])
 }
 
 model Folder {
@@ -235,6 +277,8 @@ model Document {
   views           DocumentView[]
   tags            DocumentTag[]
   readingProgress ReadingProgress[]
+  linksFrom       DocumentLink[] @relation("DocumentLinkFrom")
+  linksTo         DocumentLink[] @relation("DocumentLinkTo")
 
   @@unique([repositoryId, slug])
   @@index([readerCount])
@@ -399,6 +443,19 @@ model AnalyticsEvent {
 
   @@index([eventType, createdAt])
   @@index([userId, createdAt])
+}
+
+model DocumentLink {
+  id             String           @id @default(cuid())
+  fromDocumentId String
+  fromDocument   Document         @relation("DocumentLinkFrom", fields: [fromDocumentId], references: [id], onDelete: Cascade)
+  toDocumentId   String
+  toDocument     Document         @relation("DocumentLinkTo", fields: [toDocumentId], references: [id], onDelete: Cascade)
+  type           DocumentLinkType
+  createdAt      DateTime         @default(now())
+
+  @@unique([fromDocumentId, toDocumentId, type])
+  @@index([toDocumentId])
 }
 
 model DocumentView {

@@ -44,6 +44,7 @@ export const productTerms = {
   document: "Document",
   publication: "Publication",
   collection: "Collection",
+  trace: "Trace",
   author: "Author",
   creator: "Creator",
   library: "Library",

@@ -17,13 +17,16 @@ export function ReaderTopBar() {
   const backHref =
     parts[0] === "p" && parts.length >= 2
       ? `/p/${parts[1]}`
-      : parts.length >= 3
-        ? `/r/${parts[1]}/${parts[2]}`
-        : "/explore";
-  const backLabel =
-    parts[0] === "p" ? "Back to publication" : "Back to collection";
+      : parts[0] === "u" && parts[2] === "trace" && parts.length >= 4
+        ? `/u/${parts[1]}/trace/${parts[3]}`
+        : parts[0] === "r" && parts.length >= 3
+          ? `/u/${parts[1]}/trace/${parts[2]}`
+          : "/explore";
+  const backLabel = parts[0] === "p" ? "Back to publication" : "Back to trace";
   const showBack =
-    (parts[0] === "p" && parts.length >= 3) || (parts[0] === "r" && parts.length >= 4);
+    (parts[0] === "p" && parts.length >= 3) ||
+    (parts[0] === "r" && parts.length >= 4) ||
+    (parts[0] === "u" && parts[2] === "trace" && parts.length >= 5);
 
   return (
     <header className="sticky top-0 z-50 chrome-bar">

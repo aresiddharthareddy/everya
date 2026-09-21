@@ -89,7 +89,7 @@ export async function searchAll(
           : `${d.repository.name} · @${d.repository.owner.username}`,
         href: d.publication
           ? `/p/${d.publication.handle}/${d.slug}`
-          : `/r/${d.repository.owner.username}/${d.repository.slug}/${d.slug}`,
+          : `/u/${d.repository.owner.username}/trace/${d.repository.slug}/${d.slug}`,
       }))
     );
   }

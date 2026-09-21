@@ -41,7 +41,11 @@ export function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function isCollectionActive(pathname: string, slug: string): boolean {
+export function isTraceActive(pathname: string, slug: string): boolean {
   const parts = pathname.split("/").filter(Boolean);
-  return parts[0] === "r" && parts.length >= 2 && parts[2] === slug;
+  if (parts[0] === "r" && parts.length >= 2 && parts[2] === slug) return true;
+  return parts[0] === "u" && parts[2] === "trace" && parts[3] === slug;
 }
+
+/** @deprecated Use isTraceActive */
+export const isCollectionActive = isTraceActive;
