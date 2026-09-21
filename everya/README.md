@@ -1,8 +1,8 @@
 # EVERYA
 
-**Structured knowledge for modern technical teams.**
+**A social network for publications and knowledge.**
 
-EVERYA is a high-performance, minimal, enterprise-grade **technical documentation and publishing platform**. It is built for technical writers, developers, SREs, and engineering teams who need structured docs—not a blog—with repositories, nested folders, markdown authoring, engagement metrics, and a clean professional UI.
+EVERYA is a next-generation platform combining **digital publishing**, **structured repositories**, and **social discovery** for authors, teams, and communities. It is built for long-form technical writing, measurable engagement, and knowledge that stays organized—not scattered posts—with collections, nested folders, markdown authoring, and a clean professional reading experience.
 
 > **Repository layout:** This project lives in the `everya/` directory of the [eveyra](https://github.com/aresiddharthareddy/eveyra) GitHub repository.
 
@@ -304,6 +304,8 @@ NEXT_PUBLIC_APP_URL="http://98.93.146.99"
 | `npm run build` | Production build |
 | `npm start` | Run production build (port 43123) |
 | `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check |
+| `npm run test` | Vitest unit tests |
 | `npm run db:push` | Push Prisma schema to SQLite |
 | `npm run db:seed` | Seed demo content |
 | `npm run db:reset` | **Destructive:** reset DB and re-seed |
@@ -392,22 +394,7 @@ everya/
 
 ## API reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| * | `/api/auth/[...all]` | Better Auth handlers |
-| GET | `/api/search?q=` | Search docs & repos |
-| POST | `/api/repositories` | Create repository |
-| POST | `/api/documents` | Create document |
-| PATCH | `/api/documents/[id]` | Autosave document |
-| POST | `/api/documents/[id]/like` | Toggle like |
-| POST | `/api/documents/[id]/rate` | Rate 1–5 stars |
-| POST | `/api/documents/[id]/bookmark` | Toggle bookmark |
-| POST | `/api/comments` | Create comment/reply |
-| POST | `/api/comments/like` | Like comment |
-| POST | `/api/upload` | Image upload |
-| GET | `/api/files/[filename]` | Serve uploaded file |
-| GET | `/api/notifications` | List notifications |
-| PATCH | `/api/users/profile` | Update profile |
+See **[EVERYA_API.md](../../EVERYA_API.md)** for the full API reference (health, follow, tags, rate limits, error format).
 
 ---
 

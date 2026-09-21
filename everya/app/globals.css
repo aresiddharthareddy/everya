@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @import "highlight.js/styles/github.min.css";
 
+/*
+ * EVERYA design tokens (Phase 1)
+ * --background / --foreground — page canvas & primary text
+ * --card / --card-foreground — elevated surfaces (stat cards, panels)
+ * --muted / --muted-foreground — subtle fills & secondary text
+ * --border / --ring — dividers & focus rings
+ * --destructive — errors & destructive actions
+ * --accent — high-contrast interactive emphasis
+ * --surface / --elevated — feed backgrounds & cards (.stat-card)
+ */
+
 :root {
   --background: #ffffff;
   --foreground: #191919;

@@ -6,7 +6,10 @@
     "dev": "node scripts/ensure-db.js && next dev -p 43123 -H 0.0.0.0",
     "build": "node scripts/ensure-db.js && next build",
     "start": "next start -p 43123 -H 0.0.0.0",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
@@ -51,6 +54,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

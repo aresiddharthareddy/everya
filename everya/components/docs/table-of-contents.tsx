@@ -1,25 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { headingId, cn } from "@/lib/utils";
 import type { TocItem } from "@/types";
 
-export function TableOfContents({ content }: { content: string }) {
-  const [items, setItems] = useState<TocItem[]>([]);
-  const [active, setActive] = useState("");
+function parseHeadings(content: string): TocItem[] {
+  const headings: TocItem[] = [];
+  const regex = /^(#{1,3})\s+(.+)$/gm;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const level = match[1].length;
+    const text = match[2].replace(/[*`]/g, "");
+    headings.push({ id: headingId(text), text, level });
+  }
+  return headings;
+}
 
-  useEffect(() => {
-    const headings: TocItem[] = [];
-    const regex = /^(#{1,3})\s+(.+)$/gm;
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      const level = match[1].length;
-      const text = match[2].replace(/[*`]/g, "");
-      const id = headingId(text);
-      headings.push({ id, text, level });
-    }
-    setItems(headings);
-  }, [content]);
+export function TableOfContents({ content }: { content: string }) {
+  const items = useMemo(() => parseHeadings(content), [content]);
+  const [active, setActive] = useState("");
 
   useEffect(() => {
     const observer = new IntersectionObserver(

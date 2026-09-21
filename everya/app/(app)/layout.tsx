@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getAppLayoutData } from "@/lib/app-data";
 import { getServerSession } from "@/lib/session";

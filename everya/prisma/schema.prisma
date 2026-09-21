@@ -147,6 +147,8 @@ model Document {
   tags     DocumentTag[]
 
   @@unique([repositoryId, slug])
+  @@index([readerCount])
+  @@index([updatedAt])
 }
 
 model UserFollow {
@@ -262,4 +264,7 @@ model DocumentView {
   user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   durationSeconds Int      @default(0)
   createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([documentId, createdAt])
 }

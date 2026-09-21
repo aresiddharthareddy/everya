@@ -12,16 +12,10 @@ export const auth = betterAuth({
     origin,
     "http://localhost:43123",
     "http://127.0.0.1:43123",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "http://localhost",
     "http://127.0.0.1",
-    (request: Request) => {
-      const raw = request.headers.get("origin") || "";
-      try {
-        return new URL(raw).origin;
-      } catch {
-        return origin;
-      }
-    },
   ],
   emailAndPassword: {
     enabled: true,

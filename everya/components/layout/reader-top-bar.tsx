@@ -8,8 +8,6 @@ import { useUIStore } from "@/hooks/use-ui-store";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { formatUsername } from "@/lib/utils";
-
 export function ReaderTopBar() {
   const pathname = usePathname();
   const { data: session } = useSession();
