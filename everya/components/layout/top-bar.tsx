@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Bell, Menu } from "lucide-react";
+import { Search, Bell, Menu, BarChart3, PenLine } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { useUIStore } from "@/hooks/use-ui-store";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ export function TopBar() {
         className="flex flex-1 max-w-md items-center gap-2 h-8 px-3 rounded-full border border-border bg-muted/40 text-sm text-muted-foreground hover:bg-muted transition-colors"
       >
         <Search className="h-3.5 w-3.5" />
-        <span className="flex-1 text-left">Search stories…</span>
+        <span className="flex-1 text-left">Search publications…</span>
         <kbd className="hidden sm:inline text-[10px] border border-border rounded px-1 py-0.5 bg-background">⌘K</kbd>
       </button>
 
@@ -46,6 +46,12 @@ export function TopBar() {
         <ThemeToggle />
         {session ? (
           <>
+            <Link href="/dashboard/new" className="hidden sm:inline-flex h-8 items-center gap-1.5 rounded-full bg-foreground px-3 text-xs font-medium text-background hover:opacity-90">
+              <PenLine className="h-3.5 w-3.5" /> Write
+            </Link>
+            <Link href="/stats" className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted">
+              <BarChart3 className="h-4 w-4" />
+            </Link>
             <Link href="/notifications" className="relative inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted">
               <Bell className="h-4 w-4" />
               {unread > 0 && (

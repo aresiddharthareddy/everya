@@ -44,6 +44,8 @@ model User {
   notifications Notification[]   @relation("NotificationRecipient")
   sentNotifs    Notification[]   @relation("NotificationActor")
   documentViews DocumentView[]
+  followers     UserFollow[]     @relation("UserFollowers")
+  following     UserFollow[]     @relation("UserFollowing")
 }
 
 model Session {
@@ -142,8 +144,37 @@ model Document {
   likes    DocumentLike[]
   bookmarks Bookmark[]
   views    DocumentView[]
+  tags     DocumentTag[]
 
   @@unique([repositoryId, slug])
+}
+
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  slug      String        @unique
+  documents DocumentTag[]
+  createdAt DateTime      @default(now())
+}
+
+model DocumentTag {
+  documentId String
+  tagId      String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, tagId])
 }
 
 model Comment {

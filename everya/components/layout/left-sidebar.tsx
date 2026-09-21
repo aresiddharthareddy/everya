@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, LayoutDashboard, Plus, Settings, X } from "lucide-react";
+import { BookOpen, Bookmark, BarChart3, LayoutDashboard, Plus, Settings, X } from "lucide-react";
 import { useUIStore } from "@/hooks/use-ui-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/explore", label: "Explore", icon: BookOpen },
+  { href: "/reading-list", label: "Library", icon: Bookmark },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

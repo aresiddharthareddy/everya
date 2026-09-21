@@ -1,81 +1,224 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatUsername, formatCount } from "@/lib/utils";
+import { getServerSession } from "@/lib/session";
+import { formatUsername } from "@/lib/utils";
+import { ExploreTabs, type ExploreTab } from "@/components/feed/explore-tabs";
+import { FeedStoryRow } from "@/components/feed/feed-story-row";
+import { TagPills } from "@/components/docs/tag-pills";
+import { Avatar } from "@/components/ui/avatar";
+import { FollowButton } from "@/components/social/follow-button";
 
-export default async function ExplorePage() {
-  const [repos, docs] = await Promise.all([
+function avgRating(values: { value: number }[]) {
+  if (!values.length) return 0;
+  return values.reduce((s, r) => s + r.value, 0) / values.length;
+}
+
+export default async function ExplorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; tag?: string }>;
+}) {
+  const { tab: rawTab, tag } = await searchParams;
+  const tab = (["trending", "latest", "following"].includes(rawTab || "")
+    ? rawTab
+    : "trending") as ExploreTab;
+  const session = await getServerSession();
+
+  const [tags, repos, suggestedAuthors] = await Promise.all([
+    prisma.tag.findMany({
+      orderBy: { name: "asc" },
+      include: { _count: { select: { documents: true } } },
+    }),
     prisma.repository.findMany({
       where: { visibility: "PUBLIC" },
-      include: { owner: { select: { username: true } }, _count: { select: { documents: true } } },
+      include: { owner: { select: { username: true, name: true } }, _count: { select: { documents: true } } },
       orderBy: { updatedAt: "desc" },
+      take: 6,
     }),
-    prisma.document.findMany({
-      where: { repository: { visibility: "PUBLIC" } },
-      include: {
-        author: { select: { username: true, name: true } },
-        repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
+    prisma.user.findMany({
+      where: session ? { NOT: { id: session.user.id } } : undefined,
+      take: 4,
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        image: true,
+        bio: true,
+        _count: { select: { documents: true, followers: true } },
       },
-      orderBy: { readerCount: "desc" },
-      take: 24,
+      orderBy: { documents: { _count: "desc" } },
     }),
   ]);
 
+  const tagFilter = tag ? { tags: { some: { tag: { slug: tag } } } } : {};
+  let docWhere: Record<string, unknown> = {
+    repository: { visibility: "PUBLIC" },
+    ...tagFilter,
+  };
+
+  if (tab === "following") {
+    if (session) {
+      const following = await prisma.userFollow.findMany({
+        where: { followerId: session.user.id },
+        select: { followingId: true },
+      });
+      const ids = following.map((f) => f.followingId);
+      docWhere = ids.length ? { ...docWhere, authorId: { in: ids } } : { id: { in: [] } };
+    } else {
+      docWhere = { id: { in: [] } };
+    }
+  }
+
+  const orderBy =
+    tab === "latest" || tab === "following"
+      ? { updatedAt: "desc" as const }
+      : { readerCount: "desc" as const };
+
+  const docs = await prisma.document.findMany({
+    where: docWhere,
+    orderBy,
+    take: 20,
+    include: {
+      author: { select: { username: true, name: true, image: true } },
+      repository: { select: { name: true, slug: true, owner: { select: { username: true } } } },
+      tags: { include: { tag: { select: { name: true, slug: true } } } },
+      ratings: { select: { value: true } },
+      _count: { select: { likes: true, comments: true } },
+    },
+  });
+
+  const tagList = tags.map((t) => ({ name: t.name, slug: t.slug, count: t._count.documents }));
+  const [featured, ...rest] = docs;
+
+  const followingSet = session
+    ? new Set(
+        (
+          await prisma.userFollow.findMany({
+            where: { followerId: session.user.id },
+            select: { followingId: true },
+          })
+        ).map((f) => f.followingId)
+      )
+    : new Set<string>();
+
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-12">
-      <div>
-        <h1 className="font-serif text-3xl tracking-tight">Explore</h1>
-        <p className="text-sm text-muted-foreground mt-1">Staff-grade writing and public collections</p>
+    <div className="min-h-full bg-muted/15">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8 py-8 sm:py-12">
+        <div className="grid lg:grid-cols-[1fr_300px] gap-10 lg:gap-14">
+          <div>
+            <header className="mb-8">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Discover</p>
+              <h1 className="font-serif text-3xl sm:text-4xl tracking-tight">Stories for you</h1>
+            </header>
+
+            <ExploreTabs active={tab} tag={tag} />
+
+            {tab === "following" && !session && (
+              <div className="mt-8 stat-card p-8 text-center">
+                <p className="text-sm text-muted-foreground">Sign in to see stories from authors you follow.</p>
+                <Link href="/login?next=/explore?tab=following" className="inline-block mt-4 text-sm font-medium px-5 py-2 rounded-full bg-foreground text-background">
+                  Sign in
+                </Link>
+              </div>
+            )}
+
+            <section className="mt-8 divide-y divide-border/60">
+              {docs.length === 0 ? (
+                <p className="py-12 text-sm text-muted-foreground text-center">
+                  {tab === "following" ? "Follow authors to build your personalized feed." : "No stories match this filter."}
+                </p>
+              ) : (
+                <>
+                  {featured && tab === "trending" && !tag && (
+                    <FeedStoryRow
+                      featured
+                      href={`/r/${featured.repository.owner.username}/${featured.repository.slug}/${featured.slug}`}
+                      title={featured.title}
+                      excerpt={featured.excerpt}
+                      authorName={featured.author.name}
+                      authorUsername={featured.author.username}
+                      authorImage={featured.author.image}
+                      readingMinutes={featured.readingMinutes}
+                      readerCount={featured.readerCount}
+                      likeCount={featured._count.likes}
+                      commentCount={featured._count.comments}
+                      avgRating={avgRating(featured.ratings)}
+                      tags={featured.tags.map((t) => t.tag)}
+                    />
+                  )}
+                  {(tab === "trending" && !tag ? rest : docs).map((doc) => (
+                    <FeedStoryRow
+                      key={doc.id}
+                      href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`}
+                      title={doc.title}
+                      excerpt={doc.excerpt}
+                      authorName={doc.author.name}
+                      authorUsername={doc.author.username}
+                      authorImage={doc.author.image}
+                      readingMinutes={doc.readingMinutes}
+                      readerCount={doc.readerCount}
+                      likeCount={doc._count.likes}
+                      commentCount={doc._count.comments}
+                      avgRating={avgRating(doc.ratings)}
+                      tags={doc.tags.map((t) => t.tag)}
+                    />
+                  ))}
+                </>
+              )}
+            </section>
+          </div>
+
+          <aside className="space-y-8 lg:pt-16">
+            <div className="stat-card p-5">
+              <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">Topics</h2>
+              <TagPills tags={tagList.slice(0, 12)} activeSlug={tag} />
+            </div>
+
+            {suggestedAuthors.length > 0 && (
+              <div className="stat-card p-5">
+                <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">Who to follow</h2>
+                <ul className="space-y-4">
+                  {suggestedAuthors.map((author) => (
+                    <li key={author.id} className="flex items-start gap-3">
+                      <Link href={`/u/${author.username}`}>
+                        <Avatar src={author.image} name={author.name || author.username} size="sm" />
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/u/${author.username}`} className="text-sm font-medium hover:underline truncate block">
+                          {author.name || formatUsername(author.username)}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">{author._count.documents} stories · {author._count.followers} followers</p>
+                      </div>
+                      <FollowButton
+                        username={author.username}
+                        initialFollowing={followingSet.has(author.id)}
+                        signedIn={!!session}
+                        isSelf={session?.user.id === author.id}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {repos.length > 0 && (
+              <div className="stat-card p-5">
+                <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">Collections</h2>
+                <ul className="space-y-3">
+                  {repos.map((repo) => (
+                    <li key={repo.id}>
+                      <Link href={`/r/${repo.owner.username}/${repo.slug}`} className="block group">
+                        <p className="text-sm font-medium group-hover:underline">{repo.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatUsername(repo.owner.username)} · {repo._count.documents} stories</p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </aside>
+        </div>
       </div>
-
-      <section>
-        <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-6">Stories</h2>
-        {docs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing public yet.</p>
-        ) : (
-          <div className="space-y-10">
-            {docs.map((doc) => (
-              <Link key={doc.id} href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`} className="block group">
-                <p className="text-xs text-muted-foreground">
-                  {formatUsername(doc.author.username)} in {doc.repository.name}
-                </p>
-                <h3 className="mt-1 font-serif text-2xl tracking-tight group-hover:underline underline-offset-4">
-                  {doc.title}
-                </h3>
-                {doc.excerpt && (
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3">{doc.excerpt}</p>
-                )}
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {doc.readingMinutes} min · {formatCount(doc.readerCount)} readers
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">Collections</h2>
-        {repos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No public collections.</p>
-        ) : (
-          <div className="grid sm:grid-cols-2 gap-3">
-            {repos.map((repo) => (
-              <Link
-                key={repo.id}
-                href={`/r/${repo.owner.username}/${repo.slug}`}
-                className="rounded-xl border border-border p-4 hover:bg-muted/50 transition-colors"
-              >
-                <p className="font-medium">{repo.name}</p>
-                <p className="text-xs text-muted-foreground mt-1">{formatUsername(repo.owner.username)}</p>
-                {repo.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-2">{repo.description}</p>
-                )}
-                <p className="text-xs mt-3">{repo._count.documents} stories</p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }

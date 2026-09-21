@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, FolderGit2 } from "lucide-react";
+import { FileText, FolderGit2, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { FollowButton } from "@/components/social/follow-button";
 import { formatUsername, formatCount } from "@/lib/utils";
 
 export default async function ProfilePage({
@@ -41,27 +42,59 @@ export default async function ProfilePage({
   const docs = user.documents.filter((d) => isOwner || d.repository.visibility === "PUBLIC");
   const totalReaders = docs.reduce((s, d) => s + d.readerCount, 0);
 
+  const [followerCount, followingCount, isFollowing] = await Promise.all([
+    prisma.userFollow.count({ where: { followingId: user.id } }),
+    prisma.userFollow.count({ where: { followerId: user.id } }),
+    session && !isOwner
+      ? prisma.userFollow
+          .findUnique({
+            where: { followerId_followingId: { followerId: session.user.id, followingId: user.id } },
+          })
+          .then((r) => !!r)
+      : Promise.resolve(false),
+  ]);
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
+      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur z-10">
         <div className="mx-auto max-w-4xl px-6 h-14 flex items-center justify-between">
           <Link href="/" className="font-semibold text-xs tracking-[0.16em]">
             EVERYA
           </Link>
-          <Link href="/explore" className="text-sm text-muted-foreground hover:text-foreground">
-            Explore
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/explore" className="text-sm text-muted-foreground hover:text-foreground">
+              Explore
+            </Link>
+            {session && (
+              <Link href="/reading-list" className="text-sm text-muted-foreground hover:text-foreground">
+                Reading list
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-12">
         <div className="flex items-start gap-6">
           <Avatar src={user.image} name={user.name || user.username} size="lg" />
-          <div>
-            <h1 className="font-serif text-3xl tracking-tight">{user.name || formatUsername(user.username)}</h1>
-            <p className="text-muted-foreground">{formatUsername(user.username)}</p>
-            {user.bio && <p className="text-sm mt-2 max-w-lg leading-relaxed">{user.bio}</p>}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="font-serif text-3xl tracking-tight">{user.name || formatUsername(user.username)}</h1>
+                <p className="text-muted-foreground">{formatUsername(user.username)}</p>
+              </div>
+              <FollowButton
+                username={user.username}
+                initialFollowing={isFollowing}
+                signedIn={!!session}
+                isSelf={isOwner}
+              />
+            </div>
+            {user.bio && <p className="text-sm mt-3 max-w-lg leading-relaxed text-muted-foreground">{user.bio}</p>}
             <div className="flex flex-wrap gap-4 mt-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" /> {formatCount(followerCount)} followers · {followingCount} following
+              </span>
               <span className="flex items-center gap-1">
                 <FolderGit2 className="h-3.5 w-3.5" /> {repos.length} collections
               </span>
@@ -106,10 +139,12 @@ export default async function ProfilePage({
                 <Link
                   key={doc.id}
                   href={`/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`}
-                  className="flex items-center justify-between px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-between px-4 py-3.5 text-sm hover:bg-muted/50 transition-colors"
                 >
-                  <span>{doc.title}</span>
-                  <span className="text-muted-foreground">{formatCount(doc.readerCount)} readers</span>
+                  <span className="font-medium">{doc.title}</span>
+                  <span className="text-muted-foreground text-xs shrink-0 ml-4">
+                    {formatCount(doc.readerCount)} readers
+                  </span>
                 </Link>
               ))}
             </div>

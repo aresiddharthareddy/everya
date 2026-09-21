@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
+import { ensureTags } from "../lib/seed-tags";
 
 const prisma = new PrismaClient();
 
@@ -347,6 +348,20 @@ async function main() {
       { type: "RATING", title: "New rating", message: "Your API guide received a 5★ rating", userId: alex.id, actorId: kernel.id, link: `/r/alex/platform-docs/api-design` },
     ],
   });
+
+  await ensureTags(prisma);
+
+  for (const [followerId, followingId] of [
+    [infraops.id, alex.id],
+    [kernel.id, alex.id],
+    [alex.id, infraops.id],
+  ] as const) {
+    await prisma.userFollow.upsert({
+      where: { followerId_followingId: { followerId, followingId } },
+      create: { followerId, followingId },
+      update: {},
+    });
+  }
 
   console.log("✅ Seed complete!");
   console.log("   Demo accounts (password: demo12345):");
