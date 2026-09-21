@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { headingId, cn } from "@/lib/utils";
 import type { TocItem } from "@/types";
 
 export function TableOfContents({ content }: { content: string }) {
@@ -15,7 +15,7 @@ export function TableOfContents({ content }: { content: string }) {
     while ((match = regex.exec(content)) !== null) {
       const level = match[1].length;
       const text = match[2].replace(/[*`]/g, "");
-      const id = text.toLowerCase().replace(/[^\w]+/g, "-");
+      const id = headingId(text);
       headings.push({ id, text, level });
     }
     setItems(headings);

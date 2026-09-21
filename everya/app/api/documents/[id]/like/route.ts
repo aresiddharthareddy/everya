@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notify";
 
 export async function POST(
   _req: NextRequest,
@@ -11,6 +12,12 @@ export async function POST(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: documentId } = await params;
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: { repository: { select: { slug: true, owner: { select: { username: true } } } } },
+  });
+  if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const existing = await prisma.documentLike.findUnique({
     where: { documentId_userId: { documentId, userId: session.user.id } },
   });
@@ -21,5 +28,13 @@ export async function POST(
   }
 
   await prisma.documentLike.create({ data: { documentId, userId: session.user.id } });
+  await notify({
+    userId: doc.authorId,
+    actorId: session.user.id,
+    type: "LIKE",
+    title: "New like",
+    message: `Someone liked “${doc.title}”`,
+    link: `/r/${doc.repository.owner.username}/${doc.repository.slug}/${doc.slug}`,
+  });
   return NextResponse.json({ liked: true });
 }

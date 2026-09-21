@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { canViewRepo } from "@/lib/access";
 import type { TreeNode } from "@/types";
 
 export async function getRepositoryTree(
@@ -68,4 +69,12 @@ export async function getRepositoryByPath(
       _count: { select: { documents: true } },
     },
   });
+}
+
+export function assertCanView(
+  repo: { visibility: string; ownerId: string } | null,
+  userId?: string
+) {
+  if (!repo) return false;
+  return canViewRepo(repo, userId);
 }

@@ -1,15 +1,18 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, LayoutDashboard, Plus, Settings, X } from "lucide-react";
+import { BookOpen, Bookmark, BarChart3, LayoutDashboard, Plus, Settings, X } from "lucide-react";
 import { useUIStore } from "@/hooks/use-ui-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/explore", label: "Explore", icon: BookOpen },
+  { href: "/reading-list", label: "Library", icon: Bookmark },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -17,18 +20,17 @@ export function LeftSidebar({ repositories }: { repositories?: { id: string; nam
   const pathname = usePathname();
   const { sidebarOpen, mobileNavOpen, setMobileNavOpen } = useUIStore();
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname, setMobileNavOpen]);
+
   const content = (
     <aside className="flex h-full w-60 flex-col border-r border-border bg-card">
       <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <Link href="/" className="font-semibold tracking-tight text-sm">
+        <Link href="/" className="font-semibold tracking-[0.16em] text-xs">
           EVERYA
         </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden h-7 w-7"
-          onClick={() => setMobileNavOpen(false)}
-        >
+        <Button variant="ghost" size="icon" className="lg:hidden h-7 w-7" onClick={() => setMobileNavOpen(false)}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -55,9 +57,7 @@ export function LeftSidebar({ repositories }: { repositories?: { id: string; nam
         {repositories && repositories.length > 0 && (
           <div className="pt-4">
             <div className="flex items-center justify-between px-2.5 mb-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Repositories
-              </span>
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Collections</span>
               <Link href="/dashboard/new" className="text-muted-foreground hover:text-foreground">
                 <Plus className="h-3.5 w-3.5" />
               </Link>

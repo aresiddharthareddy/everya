@@ -12,12 +12,17 @@ export async function POST(req: NextRequest) {
     where: { commentId_userId: { commentId, userId: session.user.id } },
   });
 
-  if (!existing) {
+  if (existing) {
     await prisma.$transaction([
-      prisma.commentLike.create({ data: { commentId, userId: session.user.id } }),
-      prisma.comment.update({ where: { id: commentId }, data: { likeCount: { increment: 1 } } }),
+      prisma.commentLike.delete({ where: { id: existing.id } }),
+      prisma.comment.update({ where: { id: commentId }, data: { likeCount: { decrement: 1 } } }),
     ]);
+    return NextResponse.json({ liked: false });
   }
 
-  return NextResponse.json({ ok: true });
+  await prisma.$transaction([
+    prisma.commentLike.create({ data: { commentId, userId: session.user.id } }),
+    prisma.comment.update({ where: { id: commentId }, data: { likeCount: { increment: 1 } } }),
+  ]);
+  return NextResponse.json({ liked: true });
 }

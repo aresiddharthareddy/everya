@@ -14,6 +14,8 @@ export default function EditDocumentPage() {
   const [docId, setDocId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [missing, setMissing] = useState(false);
 
   const username = params.username as string;
   const repo = params.repo as string;
@@ -27,6 +29,8 @@ export default function EditDocumentPage() {
           setTitle(data.document.title);
           setContent(data.document.content);
           setDocId(data.document.id);
+        } else {
+          setMissing(true);
         }
         setLoading(false);
       });
@@ -36,11 +40,13 @@ export default function EditDocumentPage() {
     async (newContent?: string) => {
       if (!docId) return;
       setSaving(true);
-      await fetch(`/api/documents/${docId}`, {
+      const res = await fetch(`/api/documents/${docId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content: newContent ?? content }),
       });
+      if (!res.ok) setError("Could not save. Try again.");
+      else setError("");
       setSaving(false);
     },
     [docId, title, content]
@@ -52,7 +58,8 @@ export default function EditDocumentPage() {
     return () => clearTimeout(t);
   }, [content, title, docId, save]);
 
-  if (loading) return <div className="p-8 text-sm text-muted-foreground">Loading editor...</div>;
+  if (loading) return <div className="p-8 text-sm text-muted-foreground">Opening editor…</div>;
+  if (missing) return <div className="p-8 text-sm text-muted-foreground">Story not found, or you are not the author.</div>;
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-4">
@@ -65,7 +72,7 @@ export default function EditDocumentPage() {
         />
         <div className="flex gap-2">
           <span className="text-xs text-muted-foreground self-center">
-            {saving ? "Saving..." : "Autosave on"}
+            {error ? error : saving ? "Saving…" : "Saved automatically"}
           </span>
           <Button
             size="sm"

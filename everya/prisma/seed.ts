@@ -348,6 +348,20 @@ async function main() {
     ],
   });
 
+  await ensureTags(prisma);
+
+  for (const [followerId, followingId] of [
+    [infraops.id, alex.id],
+    [kernel.id, alex.id],
+    [alex.id, infraops.id],
+  ] as const) {
+    await prisma.userFollow.upsert({
+      where: { followerId_followingId: { followerId, followingId } },
+      create: { followerId, followingId },
+      update: {},
+    });
+  }
+
   console.log("✅ Seed complete!");
   console.log("   Demo accounts (password: demo12345):");
   console.log("   @alex, @infraops, @kernel");

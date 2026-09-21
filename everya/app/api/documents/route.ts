@@ -16,13 +16,23 @@ export async function POST(req: NextRequest) {
   });
   if (!repo) return NextResponse.json({ error: "Repository not found" }, { status: 404 });
 
-  const slug = slugify(title);
+  const base = slugify(title);
+  let slug = base;
+  for (let n = 2; ; n++) {
+    const clash = await prisma.document.findUnique({
+      where: { repositoryId_slug: { repositoryId: repo.id, slug } },
+    });
+    if (!clash) break;
+    slug = `${base}-${n}`;
+  }
+
+  const excerpt = (content || "").slice(0, 200).replace(/[#*`\n]/g, " ").trim();
   const doc = await prisma.document.create({
     data: {
       title: title.trim(),
       slug,
       content: content || "",
-      excerpt: (content || "").slice(0, 200),
+      excerpt,
       readingMinutes: calcReadingMinutes(content || ""),
       repositoryId: repo.id,
       authorId: session.user.id,
