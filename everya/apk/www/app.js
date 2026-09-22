@@ -146,21 +146,71 @@ function viewExplore() {
       <p class="excerpt">${esc(p.description)}</p>
     </a>`).join("");
   const tags = DATA.exploreTags.map((t) => `<span class="chip">#${esc(t)}</span>`).join("");
+  const connected = DATA.feed.filter((f) => {
+    const t = trace(f.author, f.traceSlug);
+    const d = t?.docs.find((x) => x.slug === f.docSlug);
+    return d?.links?.length;
+  }).slice(0, 4).map((f) => `<a class="card flat" href="#/u/${f.author}/trace/${f.traceSlug}/${f.docSlug}"><div class="title">${esc(f.title)}</div><p class="excerpt">${esc(f.trace)} · linked</p></a>`).join("");
   return `<h1 class="page-title">Explore</h1>
+    <p class="lede">Keyword discovery only — semantic search unavailable (no AI provider).</p>
+    <a class="btn" href="#/search">Search documents</a>
     <div class="chips">${tags}</div>
+    ${connected ? `<h2 class="section">Connected knowledge</h2>${connected}` : ""}
     <h2 class="section">Traces</h2>${traces}
     <h2 class="section">Publications</h2>${pubs}`;
 }
 
+function viewSearch() {
+  const q = (new URLSearchParams(location.hash.split("?")[1] || "")).get("q") || "";
+  const results = q.length < 2 ? [] : DATA.feed.filter((f) =>
+    [f.title, f.excerpt, f.trace].join(" ").toLowerCase().includes(q.toLowerCase())
+  );
+  return `<h1 class="page-title">Search</h1>
+    <input class="input" id="sq" placeholder="Search…" value="${esc(q)}" oninput="location.hash='#/search?q='+encodeURIComponent(this.value)" />
+    <p class="lede">Keyword matches only. Semantic search requires AI (not configured).</p>
+    ${results.length ? results.map((f) => `<a class="card" href="#/u/${f.author}/trace/${f.traceSlug}/${f.docSlug}"><div class="title">${esc(f.title)}</div><p class="excerpt">${esc(f.trace)}</p></a>`).join("") : (q.length >= 2 ? `<p class="lede">No results.</p>` : "")}`;
+}
+
+function traceIntelligenceSection(u, s) {
+  const t = trace(u, s);
+  if (!t) return "";
+  const top = [...t.docs].sort((a, b) => (b.readers || 0) - (a.readers || 0)).slice(0, 3);
+  const paths = t.docs.filter((d) => d.next).map((d) => {
+    const n = t.docs.find((x) => x.slug === d.next);
+    return n ? `<div class="card flat"><span class="meta">Suggested path</span> <a href="#/u/${u}/trace/${s}/${d.slug}">${esc(d.title)}</a> → <a href="#/u/${u}/trace/${s}/${n.slug}">${esc(n.title)}</a></div>` : "";
+  }).join("");
+  const related = (DATA.traceLinks || []).filter((l) => l.from === `${u}/${s}`);
+  return `<h2 class="section">Knowledge overview</h2>
+    <div class="stats"><span>${t.docs.length} documents</span><span>${top.reduce((n, d) => n + (d.links?.length || 0), 0)} relationships</span></div>
+    ${top.length ? `<h3 class="section">Most read</h3><div class="tree">${top.map((d) => `<a class="tree-item" href="#/u/${u}/trace/${s}/${d.slug}"><span>${esc(d.title)}</span><small>${d.readers || 0} readers</small></a>`).join("")}</div>` : ""}
+    ${paths ? `<h3 class="section">Reading paths</h3>${paths}` : ""}
+    ${related.length ? `<h3 class="section">Related traces</h3><div class="chips">${related.map((r) => `<a class="chip" href="#/u/${r.to.replace("/","/trace/")}">${esc(r.label)}</a>`).join("")}</div>` : ""}`;
+}
+
 function knowledgeSection(u, s, d) {
   const item = doc(u, s, d);
-  if (!item?.links?.length) return "";
-  const rows = item.links.map((l) => {
+  const t = trace(u, s);
+  if (!item) return "";
+  const rows = (item.links || []).map((l) => {
     const href = `#/u/${u}/trace/${s}/${l.target}`;
     const tag = l.inbound ? "Referenced by" : l.type.replace(/_/g, " ");
-    return `<a class="tree-item" href="${href}"><span>${esc(tag)}</span><span>${esc(l.label)}</span></a>`;
+    return `<a class="tree-item" href="${href}"><span>${esc(tag)} · explicit</span><span>${esc(l.label)}</span></a>`;
   }).join("");
-  return `<h2 class="section">Knowledge</h2><div class="tree">${rows}</div>`;
+  const sameTrace = (t?.docs || []).filter((x) => x.slug !== d && !(item.links || []).some((l) => l.target === x.slug))
+    .slice(0, 4).map((x) => `<a class="tree-item" href="#/u/${u}/trace/${s}/${x.slug}"><span>Same trace</span><span>${esc(x.title)}</span></a>`).join("");
+  if (!rows && !sameTrace) return "";
+  return `<h2 class="section">Related knowledge</h2><div class="tree">${rows}${sameTrace}</div>`;
+}
+
+function publicationKnowledgeSection(h) {
+  const p = pub(h);
+  if (!p) return "";
+  const linked = DATA.traces.find((t) => t.username === p.owner && t.slug === "platform-docs");
+  const rel = linked ? (DATA.traceLinks || []).filter((l) => l.from === `${linked.username}/${linked.slug}`) : [];
+  return `<h2 class="section">Knowledge</h2>
+    <div class="stats"><span>${p.articles.length} articles</span>${linked ? `<span>${linked.docs.length} trace docs</span>` : ""}</div>
+    ${linked ? `<a class="btn" href="#/u/${linked.username}/trace/${linked.slug}">Trace: ${esc(linked.name)}</a>` : ""}
+    ${rel.length ? `<div class="chips">${rel.map((r) => `<a class="chip" href="#/u/${r.to.replace("/","/trace/")}">${esc(r.label)}</a>`).join("")}</div>` : ""}`;
 }
 
 function viewTraceKnowledge(u, s, docSlug) {
@@ -206,6 +256,7 @@ function viewTrace(u, s) {
       <a class="btn" href="#/u/${u}/trace/${s}/knowledge">Knowledge map</a>
     </div>
     ${contributorsHtml(t.contributors)}
+    ${traceIntelligenceSection(u, s)}
     ${draftList ? `<h2 class="section">Drafts</h2><div class="tree">${draftList}</div>` : ""}
     <h2 class="section">Documents</h2>
     <div class="tree">${tree}</div>`;
@@ -273,6 +324,7 @@ function viewPub(h) {
     <h1 class="page-title">${esc(p.name)}</h1>
     <p class="lede">${esc(p.description)}</p>
     <button class="btn" onclick="shareLink('#/p/${h}')">Share</button>
+    ${publicationKnowledgeSection(h)}
     <h2 class="section">Articles</h2>${articles}`;
 }
 
@@ -477,6 +529,7 @@ function route() {
   const parts = path.split("/").filter(Boolean);
   let html = "";
   if (parts[0] === "explore") html = viewExplore();
+  else if (parts[0] === "search") html = viewSearch();
   else if (parts[0] === "library") html = viewLibrary();
   else if (parts[0] === "drafts" && parts[1]) html = viewLocalDraft(parts[1]);
   else if (parts[0] === "drafts") html = viewDrafts();

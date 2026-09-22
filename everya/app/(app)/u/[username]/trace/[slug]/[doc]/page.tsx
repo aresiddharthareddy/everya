@@ -188,12 +188,17 @@ export default async function TraceDocumentPage({
           {knowledge && (
             <DocumentKnowledgePanel
               trace={knowledge.trace}
+              publication={knowledge.publication}
               outbound={knowledge.outbound}
               inbound={knowledge.inbound}
               references={knowledge.references}
               referencedBy={knowledge.referencedBy}
               dependencies={knowledge.dependencies}
               partOf={knowledge.partOf}
+              previous={knowledge.previous}
+              next={knowledge.next}
+              sameTrace={knowledge.sameTrace}
+              sharedTags={knowledge.sharedTags}
             />
           )}
           {contributors && <DocumentContributors contributors={contributors.contributors} />}

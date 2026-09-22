@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
 import { ensureTags } from "../lib/seed-tags";
+import { indexDocument } from "../services/indexing";
 
 const prisma = new PrismaClient();
 
@@ -462,6 +463,14 @@ async function main() {
       status: "ACTIVE",
     },
   });
+
+  const publishedDocs = await prisma.document.findMany({
+    where: { status: "PUBLISHED" },
+    select: { id: true },
+  });
+  for (const doc of publishedDocs) {
+    await indexDocument(doc.id);
+  }
 
   console.log("✅ Seed complete!");
   console.log(`   Premium plan id: ${premiumPlan.id}`);

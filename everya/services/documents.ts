@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { canEditTraceContent, getTraceRole } from "@/lib/permissions/trace";
 import { calcReadingMinutes } from "@/lib/utils";
 import { snapshotDocumentAfterSave } from "@/services/document-revisions";
+import { scheduleDocumentIndex } from "@/services/indexing";
 import type { DocStats } from "@/types";
 
 export async function getDocumentStats(documentId: string): Promise<DocStats> {
@@ -66,10 +67,12 @@ export async function publishTraceDocument(documentId: string, userId: string) {
   const role = await getTraceRole(doc.repositoryId, userId);
   if (!role || !canEditTraceContent(role)) return null;
 
-  return prisma.document.update({
+  const published = await prisma.document.update({
     where: { id: documentId },
     data: { status: "PUBLISHED", publishedAt: doc.publishedAt ?? new Date() },
   });
+  scheduleDocumentIndex(documentId);
+  return published;
 }
 
 export async function autosaveDocument(
@@ -122,5 +125,6 @@ export async function autosaveDocument(
     excerpt: updated.excerpt,
     status: updated.status,
   });
+  if (updated.status === "PUBLISHED") scheduleDocumentIndex(documentId);
   return updated;
 }

@@ -1,5 +1,5 @@
 const DATA = {
-  version: "7.0.0",
+  version: "8.0.0",
   paymentConfigured: false,
   creators: [
     { username: "alex", tagline: "Building EveryA — knowledge for engineering teams.", members: 1, plans: 2 },

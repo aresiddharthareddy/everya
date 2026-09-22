@@ -16,6 +16,8 @@ import { FeedDocumentCard } from "@/components/feed/feed-document-card";
 import { EmptyState } from "@/components/everya/empty-state";
 import { PublicationFollowButton } from "@/components/social/publication-follow-button";
 import { formatCount, formatUsername } from "@/lib/utils";
+import { getPublicationKnowledge } from "@/services/knowledge";
+import { PublicationKnowledgePanel } from "@/components/knowledge/publication-knowledge-panel";
 
 type Props = { params: Promise<{ handle: string }> };
 
@@ -56,7 +58,7 @@ export default async function PublicationPage({ params }: Props) {
 
   if (publication.visibility === "PRIVATE" && !isMember) notFound();
 
-  const [articles, isFollowing, canWrite] = await Promise.all([
+  const [articles, isFollowing, canWrite, pubKnowledge] = await Promise.all([
     prisma.document.findMany({
       where: {
         publicationId: publication.id,
@@ -76,6 +78,7 @@ export default async function PublicationPage({ params }: Props) {
       ? prisma.publicationFollow.findUnique({ where: { publicationId_userId: { publicationId: publication.id, userId: session.user.id } } }).then((r) => !!r)
       : Promise.resolve(false),
     session && memberRole ? Promise.resolve(canPublishArticle(memberRole)) : Promise.resolve(false),
+    getPublicationKnowledge(handle, session?.user.id),
   ]);
 
   const [featured, ...rest] = articles;
@@ -142,6 +145,8 @@ export default async function PublicationPage({ params }: Props) {
             </div>
           </section>
         )}
+
+        {pubKnowledge && <PublicationKnowledgePanel data={pubKnowledge} />}
 
         <section className="mt-12">
           <h2 className="typo-section-title mb-6">Articles</h2>

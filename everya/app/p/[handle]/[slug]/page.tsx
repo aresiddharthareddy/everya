@@ -19,6 +19,8 @@ import { ReaderBody } from "@/components/reader/reader-body";
 import { ReaderArticleHeader } from "@/components/reader/reader-article-header";
 import { ReaderAuthorCard } from "@/components/reader/reader-author-card";
 import { StickyEngagementBar } from "@/components/reader/sticky-engagement-bar";
+import { getDocumentKnowledge } from "@/services/knowledge";
+import { DocumentKnowledgePanel } from "@/components/knowledge/document-knowledge-panel";
 
 type Props = { params: Promise<{ handle: string; slug: string }> };
 
@@ -70,7 +72,7 @@ export default async function PublicationArticlePage({ params }: Props) {
   const canReadContent = entitlement.allowed;
   if (canReadContent) await recordDocumentView(document.id, session?.user.id);
 
-  const [stats, comments, userLike, userBookmark, userRating, commentCount, isFollowingAuthor, isFollowingPub] =
+  const [stats, comments, userLike, userBookmark, userRating, commentCount, isFollowingAuthor, isFollowingPub, knowledge] =
     await Promise.all([
       getDocumentStats(document.id),
       prisma.comment.findMany({
@@ -94,6 +96,7 @@ export default async function PublicationArticlePage({ params }: Props) {
       session
         ? prisma.publicationFollow.findUnique({ where: { publicationId_userId: { publicationId: document.publication!.id, userId: session.user.id } } }).then((r) => !!r)
         : Promise.resolve(false),
+      canReadContent ? getDocumentKnowledge(document.id, session?.user.id) : Promise.resolve(null),
     ]);
 
   const serializedComments = comments.map((c) => ({
@@ -141,6 +144,22 @@ export default async function PublicationArticlePage({ params }: Props) {
               accessLevel={document.accessLevel}
               creatorUsername={document.author.username}
               signedIn={!!session}
+            />
+          )}
+          {knowledge && (
+            <DocumentKnowledgePanel
+              trace={knowledge.trace}
+              publication={knowledge.publication}
+              outbound={knowledge.outbound}
+              inbound={knowledge.inbound}
+              references={knowledge.references}
+              referencedBy={knowledge.referencedBy}
+              dependencies={knowledge.dependencies}
+              partOf={knowledge.partOf}
+              previous={knowledge.previous}
+              next={knowledge.next}
+              sameTrace={knowledge.sameTrace}
+              sharedTags={knowledge.sharedTags}
             />
           )}
           <ReaderAuthorCard

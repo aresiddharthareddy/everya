@@ -707,3 +707,30 @@ model CreatorPayoutBalance {
   totalPaidCents Int      @default(0)
   updatedAt      DateTime @updatedAt
 }
+
+enum ContentIndexEntityType {
+  DOCUMENT
+  TRACE
+  PUBLICATION
+}
+
+enum ContentIndexVisibility {
+  PUBLIC
+  PROTECTED
+  PRIVATE
+}
+
+model ContentIndex {
+  id             String                 @id @default(cuid())
+  entityType     ContentIndexEntityType
+  entityId       String
+  searchableText String
+  contentHash    String
+  embedding      String?
+  visibility     ContentIndexVisibility
+  indexedAt      DateTime               @default(now())
+
+  @@unique([entityType, entityId])
+  @@index([visibility])
+  @@index([entityType, visibility])
+}

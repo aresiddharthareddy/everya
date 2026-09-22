@@ -7,6 +7,8 @@ import { FeedDocumentCard, type FeedDocument } from "@/components/feed/feed-docu
 import { ExploreSidebar } from "@/components/feed/explore-sidebar";
 import { EmptyState } from "@/components/everya/empty-state";
 import { PageHeader } from "@/components/navigation/page-header";
+import { getExploreKnowledgeHints } from "@/services/knowledge";
+import { ExploreKnowledgeHints } from "@/components/knowledge/explore-knowledge-hints";
 
 const feedInclude = {
   author: { select: { username: true, name: true, image: true } },
@@ -15,8 +17,6 @@ const feedInclude = {
   tags: { include: { tag: { select: { name: true, slug: true } } } },
   ratings: { select: { value: true } },
   _count: { select: { likes: true, comments: true } },
-  subtitle: true,
-  coverImage: true,
 } as const;
 
 const TAB_COPY: Record<ExploreTab, { title: string; description: string }> = {
@@ -50,7 +50,7 @@ export default async function ExplorePage({
     ? rawTab
     : defaultTab) as ExploreTab;
 
-  const [tags, repos, suggestedAuthors] = await Promise.all([
+  const [tags, repos, suggestedAuthors, knowledgeHints] = await Promise.all([
     prisma.tag.findMany({
       orderBy: { name: "asc" },
       include: { _count: { select: { documents: true } } },
@@ -74,6 +74,7 @@ export default async function ExplorePage({
       },
       orderBy: { documents: { _count: "desc" } },
     }),
+    getExploreKnowledgeHints(),
   ]);
 
   let docs: FeedDocument[] = [];
@@ -212,14 +213,20 @@ export default async function ExplorePage({
             )}
           </div>
 
-          <ExploreSidebar
-            tags={tagList}
-            activeTag={tag}
-            suggestedAuthors={suggestedAuthors}
-            followingSet={followingSet}
-            session={session}
-            traces={repos}
-          />
+          <div className="space-y-6">
+            <ExploreKnowledgeHints
+              connectedTraces={knowledgeHints.connectedTraces}
+              connectedDocuments={knowledgeHints.connectedDocuments}
+            />
+            <ExploreSidebar
+              tags={tagList}
+              activeTag={tag}
+              suggestedAuthors={suggestedAuthors}
+              followingSet={followingSet}
+              session={session}
+              traces={repos}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -6,6 +6,13 @@ export interface SearchResult {
   title: string;
   subtitle?: string;
   href: string;
+  matchType?: "keyword" | "semantic";
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  semanticAvailable: boolean;
+  semanticUsed: boolean;
 }
 
 export interface DocStats {

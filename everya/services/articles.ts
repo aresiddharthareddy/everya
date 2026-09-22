@@ -4,6 +4,7 @@ import { getMemberRole } from "./publications";
 import { canEditArticle, canPublishArticle } from "@/lib/permissions/publication";
 import { snapshotDocumentAfterSave } from "@/services/document-revisions";
 import { trackEvent } from "./analytics";
+import { removeDocumentIndex, scheduleDocumentIndex } from "@/services/indexing";
 
 export async function createArticleDraft(
   userId: string,
@@ -89,6 +90,7 @@ export async function updateArticle(
     excerpt: updated.excerpt,
     status: updated.status,
   });
+  if (updated.status === "PUBLISHED") scheduleDocumentIndex(documentId);
   return updated;
 }
 
@@ -121,6 +123,7 @@ export async function publishArticle(documentId: string, userId: string) {
     entityId: documentId,
   });
 
+  scheduleDocumentIndex(documentId);
   return updated;
 }
 
@@ -132,8 +135,10 @@ export async function archiveArticle(documentId: string, userId: string) {
     const role = await getMemberRole(doc.publicationId, userId);
     if (!role || !canPublishArticle(role)) return null;
   }
-  return prisma.document.update({
+  const archived = await prisma.document.update({
     where: { id: documentId },
     data: { status: "ARCHIVED" },
   });
+  await removeDocumentIndex(documentId);
+  return archived;
 }

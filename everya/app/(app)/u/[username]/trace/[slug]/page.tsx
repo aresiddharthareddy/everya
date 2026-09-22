@@ -20,6 +20,8 @@ import { TraceFollowButton } from "@/components/social/trace-follow-button";
 import { TraceMembersPanel } from "@/components/knowledge/trace-members-panel";
 import { TraceContributorsStrip } from "@/components/knowledge/trace-contributors-strip";
 import { getTraceContributorRoster } from "@/services/collaboration";
+import { getTraceIntelligence } from "@/services/knowledge";
+import { TraceIntelligencePanel } from "@/components/knowledge/trace-intelligence-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCount, formatUsername } from "@/lib/utils";
@@ -63,7 +65,7 @@ export default async function TracePage({
   const canManage = traceRole ? canManageTraceMembers(traceRole) : false;
   const isOwner = session?.user.id === trace.ownerId;
 
-  const [tree, isFollowing, members, drafts, roster] = await Promise.all([
+  const [tree, isFollowing, members, drafts, roster, intelligence] = await Promise.all([
     getTraceTree(trace.id, { includeDrafts: canEdit }),
     session && !isOwner
       ? prisma.traceFollow
@@ -75,6 +77,7 @@ export default async function TracePage({
     canManage ? getTraceMembers(trace.id) : Promise.resolve([]),
     canEdit && session ? getTraceDrafts(trace.id, session.user.id) : Promise.resolve([]),
     getTraceContributorRoster(trace.id),
+    getTraceIntelligence(trace.id, session?.user.id),
   ]);
   const basePath = traceHref(trace);
   const exportUrl = `/api/traces/${trace.owner.username}/${trace.slug}/export`;
@@ -153,6 +156,8 @@ export default async function TracePage({
         </div>
 
         {roster && <TraceContributorsStrip owner={roster.owner} members={roster.members} />}
+
+        {intelligence && <TraceIntelligencePanel data={intelligence} />}
 
         {canManage && (
           <TraceMembersPanel

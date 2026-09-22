@@ -7,7 +7,7 @@ import { useUIStore } from "@/hooks/use-ui-store";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/everya/empty-state";
 import { ContentTypeBadge } from "@/components/content/content-type-badge";
-import type { SearchResult } from "@/types";
+import type { SearchResponse, SearchResult } from "@/types";
 
 const TYPE_META: Record<SearchResult["type"], { icon: typeof FileText; label: string }> = {
   document: { icon: FileText, label: "Document" },
@@ -21,6 +21,8 @@ export function SearchModal() {
   const { searchOpen, setSearchOpen } = useUIStore();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [semanticAvailable, setSemanticAvailable] = useState(false);
+  const [semanticUsed, setSemanticUsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const router = useRouter();
@@ -33,9 +35,11 @@ export function SearchModal() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&semantic=1`);
+      const data: SearchResponse = await res.json();
       setResults(data.results || []);
+      setSemanticAvailable(!!data.semanticAvailable);
+      setSemanticUsed(!!data.semanticUsed);
       setActiveIndex(0);
     } finally {
       setLoading(false);
@@ -109,6 +113,9 @@ export function SearchModal() {
               <EmptyState title="No results" description={`Nothing matched "${query}". Try different keywords.`} />
             </div>
           )}
+          {!loading && query.length >= 2 && !semanticAvailable && (
+            <p className="px-4 pb-2 text-[11px] text-muted-foreground">Semantic search unavailable — AI provider not configured.</p>
+          )}
           {results.map((r, i) => {
             const meta = TYPE_META[r.type];
             const Icon = meta.icon;
@@ -129,19 +136,26 @@ export function SearchModal() {
                   <p className="typo-nav truncate">{r.title}</p>
                   {r.subtitle && <p className="typo-meta truncate">{r.subtitle}</p>}
                 </div>
-                <ContentTypeBadge
-                  type={
-                    r.type === "document"
-                      ? "article"
-                      : r.type === "trace"
-                        ? "trace"
-                        : r.type === "repository"
-                          ? "collection"
-                          : r.type === "publication"
-                            ? "publication"
-                            : "author"
-                  }
-                />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {r.matchType === "semantic" && (
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                      Semantic
+                    </span>
+                  )}
+                  <ContentTypeBadge
+                    type={
+                      r.type === "document"
+                        ? "article"
+                        : r.type === "trace"
+                          ? "trace"
+                          : r.type === "repository"
+                            ? "collection"
+                            : r.type === "publication"
+                              ? "publication"
+                              : "author"
+                    }
+                  />
+                </div>
               </button>
             );
           })}
